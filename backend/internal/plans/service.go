@@ -24,6 +24,23 @@ type Service struct {
 	Hub     *events.Hub
 	Now     func() time.Time
 	Latency *Latency // planner.Plan timings, for the latency claim
+	// OnChange runs after blocks are accepted, moved or dropped. The dispatcher sets it to
+	// wake up early, so a block accepted one minute out still gets its warning on time.
+	OnChange func()
+	// Calendar receives write-back work for accepted blocks; nil disables write-back.
+	Calendar Writer
+}
+
+// Writer copies accepted blocks to the user's calendar (see calendar.Writer).
+type Writer interface {
+	Upsert(userID, blockID uint)
+	Remove(userID, blockID uint)
+}
+
+func (s *Service) changed() {
+	if s.OnChange != nil {
+		s.OnChange()
+	}
 }
 
 func New(db *gorm.DB, hub *events.Hub) *Service {
@@ -109,6 +126,7 @@ func (s *Service) Propose(ctx context.Context, userID uint, p Proposal) (*View, 
 		UserID: userID, Status: store.PlanProposed, Source: p.Source, WindowStart: from.UTC(), WindowEnd: to.UTC(),
 		Request: truncate(p.Text, 500), Rationale: truncate(p.Narration, 1200), InputHash: prep.Hash,
 		Notes: result.Notes, Replaces: p.Replaces, CreatedAt: s.Now().UTC(), // the service's clock, which the cache reads
+		AllowEvening: prep.Input.Request.AllowEvening, AllowWeekend: prep.Input.Request.AllowWeekend,
 	}
 	for _, u := range result.Unplaced {
 		plan.Unplaced = append(plan.Unplaced, store.UnplacedTask{TaskID: u.TaskID, Task: u.Task, Wanted: u.Wanted, Placed: u.Placed, Reason: u.Reason})

@@ -29,6 +29,7 @@ import (
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/engine"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/events"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/plans"
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/scheduler"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/store"
 )
 
@@ -86,10 +87,15 @@ func run(addr, dbPath, static string) error {
 	g.Go(func() error { return cal.Run(ctx) })        // debounced syncs, or polling without PUBLIC_URL
 	g.Go(func() error { return cal.RunRenewer(ctx) }) // push channels expire after about a week
 
+	planSvc := plans.New(db, hub)
+	dispatcher := scheduler.New(db, hub, timers)
+	planSvc.OnChange = dispatcher.Wake // a block accepted one minute out still gets its warning
+	g.Go(func() error { dispatcher.Run(ctx.Done()); return nil })
+
 	srv := &http.Server{
 		Addr: addr,
 		Handler: api.NewRouter(api.Deps{
-			DB: db, Hub: hub, Engine: timers, Calendar: cal, Plans: plans.New(db, hub),
+			DB: db, Hub: hub, Engine: timers, Calendar: cal, Plans: planSvc, Dispatcher: dispatcher,
 			Auth: auth.NewManager(secret, os.Getenv("SECURE_COOKIES") == "true"),
 		}, static),
 		ReadHeaderTimeout: 5 * time.Second,

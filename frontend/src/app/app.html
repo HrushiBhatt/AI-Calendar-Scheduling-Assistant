@@ -27,6 +27,10 @@
 
   <router-outlet />
 
+  @if (auth.user()) {
+    <app-starting-banner />
+  }
+
   @switch (brew.dialog()) {
     @case ('intention') {
       <app-intention-dialog />

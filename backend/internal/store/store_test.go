@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 const testKey = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
@@ -117,5 +118,41 @@ func TestOpenEnablesWALOnFiles(t *testing.T) {
 	db.Raw("PRAGMA busy_timeout").Scan(&timeout)
 	if mode != "wal" || timeout != 5000 {
 		t.Fatalf("journal_mode=%q busy_timeout=%d", mode, timeout)
+	}
+}
+
+// Times are stored and compared as text, so every argument must be in UTC or a query
+// near midnight compares the wrong way. The driver wrapper makes that true everywhere.
+func TestTimeArgumentsCompareAsInstantsWhateverTheirZone(t *testing.T) {
+	db, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ny, _ := time.LoadLocation("America/New_York")
+	tokyo, _ := time.LoadLocation("Asia/Tokyo")
+	// 03:22 UTC on the 25th is 23:22 on the 24th in New York and 12:22 on the 25th in Tokyo.
+	at := time.Date(2026, 10, 25, 3, 22, 0, 0, time.UTC)
+	db.Create(&ScheduledSession{UserID: 1, PlanID: 1, Mode: "x", StartsAt: at.In(tokyo), FocusMin: 25, Status: BlockAccepted})
+
+	var raw string
+	db.Raw("SELECT starts_at || '' FROM scheduled_sessions").Scan(&raw) // as text, not parsed back into a time
+	if !strings.HasPrefix(raw, "2026-10-25 03:22:00") || !strings.HasSuffix(raw, "+00:00") {
+		t.Fatalf("stored %q, want UTC", raw)
+	}
+	for _, now := range []time.Time{at.Add(time.Minute).In(ny), at.Add(time.Minute).In(tokyo), at.Add(time.Minute)} {
+		var n int64
+		db.Model(&ScheduledSession{}).Where("starts_at <= ?", now).Count(&n)
+		if n != 1 {
+			t.Errorf("starts_at <= %v matched %d rows, want 1", now, n)
+		}
+		db.Model(&ScheduledSession{}).Where("starts_at > ?", now).Count(&n)
+		if n != 0 {
+			t.Errorf("starts_at > %v matched %d rows, want 0", now, n)
+		}
+	}
+	var back ScheduledSession
+	db.First(&back)
+	if !back.StartsAt.Equal(at) {
+		t.Errorf("read back %v, want %v", back.StartsAt, at)
 	}
 }

@@ -21,7 +21,7 @@
   display: grid;
   grid-template-columns: auto 1fr auto auto auto;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   padding: 10px;
   background: var(--gray-850);
   border-left: 3px solid transparent;
@@ -114,7 +114,7 @@
 }
 
 .task .icon-btn {
-  width: 28px;
+  width: 22px;
 }
 
 .due,

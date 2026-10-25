@@ -7,6 +7,7 @@ import {
   PlanRequest,
   PlanResponse,
   PlanView,
+  ScheduledBlock,
   Preset,
   DaySchedule,
   Session,
@@ -68,6 +69,15 @@ export class Api {
   requestPlan = (req: PlanRequest) => this.send<PlanResponse>('POST', '/api/assistant/plan', req);
   livePlans = () => this.get<PlanView[]>('/api/plans/live');
   plan = (id: number) => this.get<PlanView>(`/api/plans/${id}`);
+  /** Accept all of a proposal, or only the listed blocks. */
+  acceptPlan = (id: number, blockIds?: number[]) =>
+    this.send<PlanView>('POST', `/api/plans/${id}/accept`, blockIds ? { block_ids: blockIds } : {});
+  rejectPlan = (id: number) => this.send<PlanView>('POST', `/api/plans/${id}/reject`);
+  /** Move (and optionally re-rhythm) one block. The server re-validates; a 409 says why not. */
+  moveBlock = (id: number, startsAt: string, mode?: string) =>
+    this.send<ScheduledBlock>('PATCH', `/api/scheduled/${id}`, mode ? { starts_at: startsAt, mode } : { starts_at: startsAt });
+  dropBlock = (id: number) => this.send<void>('DELETE', `/api/scheduled/${id}`);
+  startBlock = (id: number) => this.send<TimerState>('POST', `/api/scheduled/${id}/start`);
 
   /** The user's calendar and accepted blocks for local days from..to (inclusive). */
   schedule = (from: string, to = from) => this.get<DaySchedule>(`/api/schedule?from=${from}&to=${to}`);

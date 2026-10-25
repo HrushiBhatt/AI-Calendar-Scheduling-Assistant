@@ -2,7 +2,7 @@ import { DestroyRef, Injectable, computed, inject, resource, signal } from '@ang
 import { Api, errorMessage } from './api';
 import { Auth } from './auth';
 import { LiveEvents } from './live';
-import { LiveEvent, PlanRequest, PlanResponse, UnplacedReason } from './models';
+import { LiveEvent, PlanRequest, PlanResponse, PlanView, UnplacedReason } from './models';
 import { Toasts } from './toast';
 
 /** Live events after which the open proposals are stale. */
@@ -49,6 +49,35 @@ export class Assistant {
 
   refresh(): void {
     if (this.live.status() !== 'idle') this.live.reload();
+  }
+
+  /** Accept the picked blocks of a proposal (all of them when none were unticked). */
+  async accept(plan: PlanView, excluded: ReadonlySet<number>): Promise<boolean> {
+    const picked = plan.blocks.filter((b) => !excluded.has(b.id)).map((b) => b.id);
+    return this.decide(async () => {
+      await this.api.acceptPlan(plan.id, picked.length === plan.blocks.length ? undefined : picked);
+      this.toasts.show(picked.length === 1 ? 'Block scheduled.' : `${picked.length} blocks scheduled.`);
+    });
+  }
+
+  async reject(plan: PlanView): Promise<boolean> {
+    return this.decide(() => this.api.rejectPlan(plan.id));
+  }
+
+  private async decide(fn: () => Promise<unknown>): Promise<boolean> {
+    this.pending.set(true);
+    try {
+      await fn();
+      this.last.set(null);
+      this.refresh();
+      return true;
+    } catch (err) {
+      this.toasts.show(errorMessage(err));
+      this.refresh(); // a 409 may mean the plan changed under us
+      return false;
+    } finally {
+      this.pending.set(false);
+    }
   }
 
   /** Ask for a plan. Resolves to the response, or null when the request failed (with a toast). */

@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Api, errorMessage } from '../core/api';
 import { Assistant } from '../core/assistant';
 import { Brew } from '../core/brew';
 import { PlanResponse, PlanView, ScheduledBlock } from '../core/models';
 import { Schedule } from '../core/schedule';
+import { Toasts } from '../core/toast';
 import { dayIn, formatDay } from '../core/zoned';
-import { DayTimeline } from './day-timeline';
+import { BlockMove, DayTimeline } from './day-timeline';
 import { PlanComposer } from './plan-composer';
 import { PlanReview } from './plan-review';
 
@@ -21,16 +23,28 @@ import { PlanReview } from './plan-review';
     <div class="side">
       <app-plan-composer (planned)="onPlanned($event)" />
       @if (assistant.conflict(); as c) {
-        <app-plan-review [plan]="c" [zone]="zone()" [excluded]="excluded()" (toggle)="toggle($event)" (showDay)="schedule.show($event)" />
+        <app-plan-review
+          [plan]="c"
+          [zone]="zone()"
+          [excluded]="excluded()"
+          [busy]="assistant.pending()"
+          (toggle)="toggle($event)"
+          (showDay)="schedule.show($event)"
+          (accept)="assistant.accept(c, excluded())"
+          (reject)="assistant.reject(c)"
+        />
       }
       @if (assistant.proposal(); as p) {
         <app-plan-review
           [plan]="p"
           [zone]="zone()"
           [excluded]="excluded()"
+          [busy]="assistant.pending()"
           [notice]="assistant.last()?.notice"
           (toggle)="toggle($event)"
           (showDay)="schedule.show($event)"
+          (accept)="assistant.accept(p, excluded())"
+          (reject)="assistant.reject(p)"
         />
       }
     </div>
@@ -58,6 +72,9 @@ import { PlanReview } from './plan-review';
           [blocks]="blocksToday()"
           [dimmed]="excluded()"
           [now]="schedule.now()"
+          [canMove]="canMove"
+          (moved)="move($event)"
+          (activate)="activate($event)"
         />
         <p class="panel-note legend">
           <span class="key meeting"></span> meeting <span class="key proposed"></span> proposed
@@ -131,7 +148,16 @@ export class PlanPage {
   protected readonly schedule = inject(Schedule);
   protected readonly assistant = inject(Assistant);
   protected readonly brew = inject(Brew);
+  private readonly api = inject(Api);
+  private readonly toasts = inject(Toasts);
   protected readonly zone = this.schedule.zone;
+
+  /** Where blocks being moved are drawn until the server answers. */
+  private readonly moving = signal<ReadonlyMap<number, string>>(new Map());
+
+  /** Blocks that haven't started can move; the server has the final say. */
+  protected readonly canMove = (b: ScheduledBlock) =>
+    (b.status === 'proposed' || b.status === 'accepted' || b.status === 'conflicted') && Date.parse(b.starts_at) > Date.now();
   protected readonly ms = (iso: string) => Date.parse(iso);
 
   /** Blocks the user unticked in the review. Reset whenever a different plan arrives. */
@@ -147,7 +173,8 @@ export class PlanPage {
       .filter((p): p is PlanView => !!p)
       .flatMap((p) => p.blocks)
       .filter((b) => b.status === 'proposed' && dayIn(b.starts_at, this.zone()) === day);
-    return [...accepted, ...proposed] as ScheduledBlock[];
+    const moving = this.moving();
+    return [...accepted, ...proposed].map((b) => (moving.has(b.id) ? { ...b, starts_at: moving.get(b.id)! } : b));
   });
 
   constructor() {
@@ -165,6 +192,35 @@ export class PlanPage {
       if (!next.delete(id)) next.add(id);
       return next;
     });
+  }
+
+  /**
+   * Draw the block at its new time at once, then ask the server. On a 409 it snaps back
+   * and the toast says why; on success the refetch the server triggers takes over.
+   */
+  protected async move({ block, startsAt }: BlockMove): Promise<void> {
+    const iso = new Date(startsAt).toISOString();
+    this.moving.update((m) => new Map(m).set(block.id, iso));
+    try {
+      const saved = await this.api.moveBlock(block.id, iso);
+      // Write the server's answer into both views now; the refetch it triggers confirms it.
+      const swap = (b: ScheduledBlock) => (b.id === saved.id ? saved : b);
+      this.schedule.data.update((d) => d && { ...d, blocks: d.blocks.map(swap) });
+      this.assistant.live.update((plans) => plans?.map((p) => ({ ...p, blocks: p.blocks.map(swap) })));
+    } catch (err) {
+      this.toasts.show(`Can't move it there: ${errorMessage(err)}`);
+    } finally {
+      this.moving.update((m) => {
+        const next = new Map(m);
+        next.delete(block.id);
+        return next;
+      });
+    }
+  }
+
+  /** Clicking a proposed block ticks or unticks it, like its checkbox. */
+  protected activate(b: ScheduledBlock): void {
+    if (b.status === 'proposed') this.toggle(b.id);
   }
 
   /** Show the day the new plan starts on. */

@@ -247,4 +247,13 @@ export type LiveEvent =
   | { type: 'plan.proposed'; data: { plan_id: number } }
   | { type: 'plan.accepted'; data: { plan_id: number; block_ids: number[] } }
   | { type: 'plan.conflict'; data: { plan_id: number; block_ids: number[]; replacement_plan_id: number | null } }
-  | { type: 'scheduled.starting'; data: { scheduled_id: number; starts_at: string } };
+  | { type: 'scheduled.starting'; data: Starting };
+
+/** A planned block is about to start on its own. */
+export interface Starting {
+  scheduled_id: number;
+  starts_at: string;
+  intention: string;
+  focus_min: number;
+  mode: string;
+}

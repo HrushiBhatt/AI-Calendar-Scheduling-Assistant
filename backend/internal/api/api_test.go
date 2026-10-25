@@ -24,6 +24,7 @@ import (
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/engine"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/events"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/plans"
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/scheduler"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/store"
 )
 
@@ -34,6 +35,8 @@ type env struct {
 	cal    *calendar.Service
 	plans  *plans.Service
 	hub    *events.Hub
+	disp   *scheduler.Dispatcher
+	engine *engine.Engine
 }
 
 const sealKey = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
@@ -56,13 +59,16 @@ func setup(t *testing.T, staticDir string) *env {
 	fake := calendar.NewFake("fake", "ada@gmail.example")
 	cal := calendar.NewService(db, hub, calendar.Options{Providers: []calendar.Provider{fake}, ConnectVia: "fake"})
 	planSvc := plans.New(db, hub)
+	timers := engine.New(t.Context(), db, hub)
+	disp := scheduler.New(db, hub, timers)
+	planSvc.OnChange = disp.Wake
 	router := NewRouter(Deps{
-		DB: db, Hub: hub, Engine: engine.New(t.Context(), db, hub), Calendar: cal, Plans: planSvc,
+		DB: db, Hub: hub, Engine: timers, Calendar: cal, Plans: planSvc, Dispatcher: disp,
 		Auth: auth.NewManager([]byte("test-secret"), false),
 	}, staticDir)
 	server := httptest.NewServer(router)
 	t.Cleanup(server.Close)
-	return &env{server: server, db: db, fake: fake, cal: cal, plans: planSvc, hub: hub}
+	return &env{server: server, db: db, fake: fake, cal: cal, plans: planSvc, hub: hub, disp: disp, engine: timers}
 }
 
 // client is one browser: it keeps its own login cookie.

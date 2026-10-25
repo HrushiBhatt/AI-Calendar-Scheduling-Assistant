@@ -245,8 +245,11 @@ type Plan struct {
 	Unplaced    []UnplacedTask `json:"unplaced" gorm:"serializer:json"`
 	Notes       []string       `json:"notes" gorm:"serializer:json"`
 	// Replaces lists the conflicted blocks a reconciliation plan would replace.
-	Replaces  []uint    `json:"replaces,omitempty" gorm:"serializer:json"`
-	CreatedAt time.Time `json:"created_at"`
+	Replaces []uint `json:"replaces,omitempty" gorm:"serializer:json"`
+	// What the request allowed, so a block dragged later is held to the same limits.
+	AllowEvening bool      `json:"allow_evening"`
+	AllowWeekend bool      `json:"allow_weekend"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 // Scheduled block statuses.
@@ -348,7 +351,7 @@ func Open(path string) (*gorm.DB, error) {
 		}
 		dsn = path + sep + "_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
 	}
-	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
+	db, err := gorm.Open(&sqlite.Dialector{DriverName: utcDriverName, DSN: dsn}, &gorm.Config{
 		NowFunc: func() time.Time { return time.Now().UTC() },
 		Logger: logger.New(log.New(os.Stderr, "", log.LstdFlags), logger.Config{
 			SlowThreshold:             200 * time.Millisecond,

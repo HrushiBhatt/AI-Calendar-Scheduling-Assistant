@@ -24,16 +24,18 @@ import (
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/engine"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/events"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/plans"
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/scheduler"
 )
 
 // Deps are the long-lived services the HTTP layer uses.
 type Deps struct {
-	DB       *gorm.DB
-	Auth     *auth.Manager
-	Hub      *events.Hub
-	Engine   *engine.Engine
-	Calendar *calendar.Service
-	Plans    *plans.Service
+	DB         *gorm.DB
+	Auth       *auth.Manager
+	Hub        *events.Hub
+	Engine     *engine.Engine
+	Calendar   *calendar.Service
+	Plans      *plans.Service
+	Dispatcher *scheduler.Dispatcher
 }
 
 type handler struct {
@@ -91,6 +93,11 @@ func NewRouter(d Deps, staticDir string) *gin.Engine {
 	my.POST("/assistant/plan", perIP(h.planIP, "plan"), perUser(h.planLimit, "plan"), h.requestPlan)
 	my.GET("/plans/live", h.livePlans)
 	my.GET("/plans/:id", h.getPlan)
+	my.POST("/plans/:id/accept", h.acceptPlan)
+	my.POST("/plans/:id/reject", h.rejectPlan)
+	my.PATCH("/scheduled/:id", h.moveBlock)
+	my.DELETE("/scheduled/:id", h.dropBlock)
+	my.POST("/scheduled/:id/start", h.startBlock)
 
 	r.NoRoute(func(c *gin.Context) {
 		isRead := c.Request.Method == http.MethodGet || c.Request.Method == http.MethodHead

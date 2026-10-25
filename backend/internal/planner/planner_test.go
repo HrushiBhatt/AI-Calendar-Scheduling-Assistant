@@ -558,3 +558,61 @@ func lineDiff(want, got string) string {
 	}
 	return strings.Join(out, "\n")
 }
+
+// TestCheckAgreesWithPlan: every block Plan places passes Check against the rest of its
+// plan, and any slot Check accepts lies in free time Plan would also have used.
+func TestCheckAgreesWithPlan(t *testing.T) {
+	zones := []string{"America/New_York", "Europe/Berlin", "Asia/Kathmandu"}
+	for seed := range uint64(300) {
+		rng := rand.New(rand.NewPCG(seed, 7))
+		loc, _ := time.LoadLocation(zones[rng.IntN(len(zones))])
+		in := randomInput(rng, loc)
+		in.Request.AvoidBefore, in.Request.AvoidAfter = "", ""
+		r, err := Plan(in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		modeOf := func(name string) Mode {
+			for _, m := range in.Modes {
+				if m.Name == name {
+					return m
+				}
+			}
+			t.Fatalf("seed %d: unknown mode %q", seed, name)
+			return Mode{}
+		}
+		for i, b := range r.Blocks {
+			others := in
+			others.Booked = slices.Clone(in.Booked)
+			for j, o := range r.Blocks {
+				if j != i {
+					others.Booked = append(others.Booked, Booked{Start: o.StartsAt, FocusMin: o.FocusMin, RestMin: o.RestMin})
+				}
+			}
+			if v, err := Check(others, b.StartsAt, modeOf(b.Mode)); err != nil || v.Code != "" {
+				t.Fatalf("seed %d: Plan placed %v but Check says %+v (%v)", seed, b.StartsAt.In(loc), v, err)
+			}
+		}
+		// Random slots: whatever Check accepts must be inside a free interval of a planner
+		// asked for that one mode.
+		for range 40 {
+			m := in.Modes[rng.IntN(len(in.Modes))]
+			single := in
+			single.Modes, single.Request.ModeHint = []Mode{m}, ""
+			p, _ := newPlanner(single)
+			d := p.days[rng.IntN(len(p.days))]
+			start := ceilGrid(d.start.Add(time.Duration(rng.IntN(12*60)-120) * time.Minute))
+			v, err := Check(in, start, m)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if v.Code != "" {
+				continue
+			}
+			inside := slices.ContainsFunc(d.free, func(f span) bool { return !start.Before(f.start) && !start.Add(m.occupies()).After(f.end) })
+			if !inside {
+				t.Fatalf("seed %d: Check accepted %v (%s) outside every free interval %v", seed, start.In(loc), m.Name, d.free)
+			}
+		}
+	}
+}

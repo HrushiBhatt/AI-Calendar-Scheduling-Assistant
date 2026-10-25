@@ -71,7 +71,7 @@ const SOURCE_TITLE: Record<PlanView['source'], string> = {
         <p class="empty">Nothing fit in that window.</p>
       }
 
-      @if (unplaced().length) {
+      @if (unplaced().length || waiting().length) {
         <div class="unplaced">
           <h3>Didn’t fit</h3>
           <ul>
@@ -80,10 +80,23 @@ const SOURCE_TITLE: Record<PlanView['source'], string> = {
                 <b>{{ u.task || 'Focus time' }}</b>: {{ u.placed }} of {{ u.wanted }} placed, because {{ reason(u.reason) }}.
               </li>
             }
+            @if (waiting().length) {
+              <li class="waiting" [title]="waitingTitles()">
+                {{ waiting().length }} other open {{ waiting().length === 1 ? 'task waits' : 'tasks wait' }} for a later plan: this one is
+                full at the number of blocks you asked for.
+              </li>
+            }
           </ul>
         </div>
       }
 
+      <div class="actions">
+        <button class="btn btn-primary px" (click)="accept.emit()" [disabled]="busy() || !chosen()">
+          Accept {{ chosen() === plan().blocks.length ? (chosen() === 1 ? 'it' : 'all ' + chosen()) : chosen() }}
+        </button>
+        <button class="btn px" (click)="reject.emit()" [disabled]="busy()">{{ plan().source === 'conflict' ? 'Keep my blocks' : 'Reject' }}</button>
+      </div>
+      <p class="hint">Untick a block to leave it out. Drag one on the timeline, or focus it and press Shift with an arrow key, to move it 15 minutes.</p>
     </section>
   `,
   styles: `
@@ -216,6 +229,7 @@ const SOURCE_TITLE: Record<PlanView['source'], string> = {
       font-size: 0.72rem;
       color: var(--gray-500);
     }
+
   `,
 })
 export class PlanReview {
@@ -232,7 +246,11 @@ export class PlanReview {
 
   protected readonly title = computed(() => SOURCE_TITLE[this.plan().source]);
   protected readonly chosen = computed(() => this.plan().blocks.filter((b) => !this.excluded().has(b.id)).length);
-  protected readonly unplaced = computed(() => this.plan().unplaced ?? []);
+  /** Tasks with a real reason to report. Open tasks the request never reached are summed up in one line. */
+  protected readonly unplaced = computed(() => (this.plan().unplaced ?? []).filter((u) => !this.untouched(u)));
+  protected readonly waiting = computed(() => (this.plan().unplaced ?? []).filter((u) => this.untouched(u)));
+  protected readonly waitingTitles = computed(() => this.waiting().map((u) => u.task).join(', '));
+  private readonly untouched = (u: { placed: number; reason: string }) => u.placed === 0 && u.reason === 'total_blocks_reached';
   protected readonly days = computed(() => {
     const groups: { day: string; label: string; blocks: ScheduledBlock[] }[] = [];
     for (const b of this.plan().blocks) {
