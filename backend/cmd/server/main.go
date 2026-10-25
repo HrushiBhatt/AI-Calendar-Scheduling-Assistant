@@ -88,6 +88,12 @@ func run(addr, dbPath, static string) error {
 	g.Go(func() error { return cal.RunRenewer(ctx) }) // push channels expire after about a week
 
 	planSvc := plans.New(db, hub)
+	// After a sync changes a calendar, check accepted blocks against it.
+	cal.AfterSync = func(ctx context.Context, userID uint) {
+		if err := planSvc.Reconcile(ctx, userID); err != nil {
+			log.Printf("plans: reconciling user %d: %v", userID, err)
+		}
+	}
 	dispatcher := scheduler.New(db, hub, timers)
 	planSvc.OnChange = dispatcher.Wake // a block accepted one minute out still gets its warning
 	g.Go(func() error { dispatcher.Run(ctx.Done()); return nil })

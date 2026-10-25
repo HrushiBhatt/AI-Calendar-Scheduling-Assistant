@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/calendar"
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/plans"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/store"
 )
 
@@ -173,5 +174,55 @@ func TestPushWebhookNeedsNoSessionAndAlwaysAnswers200(t *testing.T) {
 	res.Body.Close()
 	if res.StatusCode != 200 {
 		t.Fatalf("push: %d, want 200", res.StatusCode)
+	}
+}
+
+// The whole conflict loop over HTTP: accept a plan, a meeting moves onto a block in the
+// connected calendar, the next sync marks the block conflicted and proposes a replacement.
+func TestAMeetingMovedInTheCalendarRaisesAConflict(t *testing.T) {
+	e := setup(t, "")
+	e.clock = func() time.Time { return mondayMorning }
+	ada, task := e.plannerUser(t, "ada@example.com")
+	ada.connectCalendar()
+	plan := e.propose(t, ada, task)
+	if code := ada.call("POST", "/api/plans/"+itoa(plan.ID)+"/accept", nil, nil); code != 200 {
+		t.Fatalf("accept: %d", code)
+	}
+	stream, stop := e.hub.Subscribe(ada.id)
+	defer stop()
+
+	hit := plan.Blocks[1]
+	e.fake.Put("ada@gmail.example", calendar.Event{ID: "moved-review", Title: "Design review", Busy: true,
+		Start: hit.StartsAt.Add(15 * time.Minute), End: hit.StartsAt.Add(45 * time.Minute)})
+	if code := ada.call("POST", "/api/calendar/sync", nil, nil); code != 200 {
+		t.Fatalf("sync: %d", code)
+	}
+
+	seen := map[string]bool{}
+	deadline := time.After(2 * time.Second)
+	for !seen["plan.conflict"] {
+		select {
+		case ev := <-stream:
+			seen[ev.Type] = true
+		case <-deadline:
+			t.Fatalf("events seen: %v, want calendar.synced then plan.conflict", seen)
+		}
+	}
+	if !seen["calendar.synced"] {
+		t.Error("no calendar.synced before the conflict")
+	}
+	var live []plans.View
+	ada.call("GET", "/api/plans/live", nil, &live)
+	if len(live) != 1 || live[0].Source != store.SourceConflict || len(live[0].Replaces) != 1 || live[0].Replaces[0] != hit.ID {
+		t.Fatalf("live = %+v", live)
+	}
+	var day struct{ Blocks []store.ScheduledSession }
+	ada.call("GET", "/api/schedule?from=2026-10-26", nil, &day)
+	statuses := map[uint]string{}
+	for _, b := range day.Blocks {
+		statuses[b.ID] = b.Status
+	}
+	if statuses[hit.ID] != store.BlockConflicted || statuses[plan.Blocks[0].ID] != store.BlockAccepted {
+		t.Errorf("statuses = %v", statuses)
 	}
 }

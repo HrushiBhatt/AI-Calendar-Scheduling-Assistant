@@ -3,6 +3,7 @@ package api
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -29,6 +30,7 @@ import (
 )
 
 type env struct {
+	clock  func() time.Time // the calendar service's clock; tests may pin it
 	server *httptest.Server
 	db     *gorm.DB
 	fake   *calendar.Fake
@@ -56,9 +58,16 @@ func setup(t *testing.T, staticDir string) *env {
 	}
 	hub := events.NewHub()
 	go hub.Run(t.Context())
+	e := &env{clock: time.Now}
 	fake := calendar.NewFake("fake", "ada@gmail.example")
-	cal := calendar.NewService(db, hub, calendar.Options{Providers: []calendar.Provider{fake}, ConnectVia: "fake"})
+	cal := calendar.NewService(db, hub, calendar.Options{Providers: []calendar.Provider{fake}, ConnectVia: "fake",
+		Now: func() time.Time { return e.clock() }})
 	planSvc := plans.New(db, hub)
+	cal.AfterSync = func(ctx context.Context, userID uint) {
+		if err := planSvc.Reconcile(ctx, userID); err != nil {
+			t.Errorf("reconcile: %v", err)
+		}
+	}
 	timers := engine.New(t.Context(), db, hub)
 	disp := scheduler.New(db, hub, timers)
 	planSvc.OnChange = disp.Wake
@@ -68,7 +77,8 @@ func setup(t *testing.T, staticDir string) *env {
 	}, staticDir)
 	server := httptest.NewServer(router)
 	t.Cleanup(server.Close)
-	return &env{server: server, db: db, fake: fake, cal: cal, plans: planSvc, hub: hub, disp: disp, engine: timers}
+	e.server, e.db, e.fake, e.cal, e.plans, e.hub, e.disp, e.engine = server, db, fake, cal, planSvc, hub, disp, timers
+	return e
 }
 
 // client is one browser: it keeps its own login cookie.

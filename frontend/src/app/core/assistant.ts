@@ -43,6 +43,10 @@ export class Assistant {
   constructor() {
     const sub = inject(LiveEvents).events$.subscribe((e) => {
       if (STALE.includes(e.type) || (e.type === 'changed' && e.data.kind === 'schedule')) this.refresh();
+      if (e.type === 'plan.conflict') {
+        const n = e.data.block_ids.length;
+        this.toasts.show(`A meeting moved onto ${n === 1 ? 'a planned block' : n + ' planned blocks'}. A replacement is waiting on the Plan page.`);
+      }
     });
     inject(DestroyRef).onDestroy(() => sub.unsubscribe());
   }
