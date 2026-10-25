@@ -1,8 +1,10 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -14,6 +16,7 @@ type registration struct {
 	Email    string `json:"email" binding:"required,email,max=254"`
 	Password string `json:"password" binding:"required,min=8,max=72"` // bcrypt reads at most 72 bytes
 	Name     string `json:"name" binding:"max=60"`
+	TimeZone string `json:"time_zone" binding:"max=64"` // the browser's IANA zone; optional
 }
 
 type credentials struct {
@@ -43,7 +46,15 @@ func (h *handler) register(c *gin.Context) {
 	if name == "" {
 		name, _, _ = strings.Cut(email, "@")
 	}
-	user := store.User{Email: email, Name: name, PasswordHash: hash, Settings: store.DefaultSettings}
+	settings := store.DefaultSettings
+	if in.TimeZone != "" {
+		if _, err := store.LoadZone(in.TimeZone); err != nil {
+			badRequest(c, err.Error())
+			return
+		}
+		settings.TimeZone = in.TimeZone
+	}
+	user := store.User{Email: email, Name: name, PasswordHash: hash, Settings: settings}
 	if !ok(c, h.DB.Create(&user).Error) || !ok(c, h.Auth.SignIn(c, user.ID)) {
 		return
 	}
@@ -89,10 +100,27 @@ func (h *handler) saveSettings(c *gin.Context) {
 	if !bind(c, &settings) {
 		return
 	}
+	if err := validateSettings(settings); err != nil {
+		badRequest(c, err.Error())
+		return
+	}
 	uid := auth.UserID(c)
 	if !ok(c, h.DB.Model(&store.User{ID: uid}).Select("settings").Updates(store.User{Settings: settings}).Error) {
 		return
 	}
 	h.changed(uid, "settings")
 	c.JSON(http.StatusOK, settings)
+}
+
+// validateSettings checks what struct tags can't: a real IANA zone and a workday that ends after it starts.
+func validateSettings(s store.Settings) error {
+	if _, err := s.Location(); err != nil {
+		return err
+	}
+	start, _ := time.Parse("15:04", s.WorkdayStart) // formats were validated by the binding tags
+	end, _ := time.Parse("15:04", s.WorkdayEnd)
+	if end.Sub(start) < time.Hour {
+		return errors.New("the workday must end at least an hour after it starts")
+	}
+	return nil
 }

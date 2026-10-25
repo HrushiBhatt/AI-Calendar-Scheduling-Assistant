@@ -19,6 +19,7 @@ export const ICONS: Record<string, string[]> = {
   reset: ['.x.xxx..', 'xx....x.', 'xxx....x', '.......x', 'x......x', 'x......x', '.x....x.', '..xxxx..'],
   gear: ['...xx...', '.x.xx.x.', '..xxxx..', 'xxx..xxx', 'xxx..xxx', '..xxxx..', '.x.xx.x.', '...xx...'],
   close: ['x.....x', '.x...x.', '..x.x..', '...x...', '..x.x..', '.x...x.', 'x.....x'],
+  more: ['.......', '.......', '.......', 'x..x..x', '.......', '.......', '.......'],
 };
 
 export const CAFE: CafeItem[] = [

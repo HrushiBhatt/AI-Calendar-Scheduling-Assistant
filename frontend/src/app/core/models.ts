@@ -9,6 +9,18 @@ export interface Settings {
   strict: boolean;
   breathe: boolean;
   tick: TickStyle;
+  // planning: the scheduler's hard constraints
+  timeZone: string; // IANA, e.g. "America/Chicago"
+  workdayStart: string; // "09:00"
+  workdayEnd: string;
+  minGapMin: number;
+  bufferMin: number;
+  maxBlocksPerDay: number;
+  maxFocusMinPerDay: number;
+  protectLunch: boolean;
+  writeBack: boolean;
+  assistantEnabled: boolean;
+  shareEventTitles: boolean;
 }
 
 export interface User {
@@ -35,11 +47,16 @@ export interface Mode {
   presetId?: number;
 }
 
+export type Energy = 'deep' | 'light' | '';
+
 export interface Task {
   id: number;
   title: string;
   estimate: number; // planned focus blocks
   done: boolean;
+  due_at: string | null;
+  priority: number; // 0 (none) to 3 (urgent)
+  energy: Energy;
   brews: number; // full focus blocks logged against it
   minutes: number;
 }
@@ -55,6 +72,7 @@ export interface Session {
   reflection: string;
   distractions: number;
   day: string;
+  scheduled_id: number | null;
   created_at: string;
 }
 

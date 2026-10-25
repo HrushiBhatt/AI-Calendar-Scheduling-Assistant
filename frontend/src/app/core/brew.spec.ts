@@ -22,6 +22,7 @@ const completed: Completed = {
     reflection: '',
     distractions: 0,
     day: '2026-09-30',
+    scheduled_id: null,
     created_at: now(),
   },
   unlocked: 'sprout',

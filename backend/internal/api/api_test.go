@@ -412,7 +412,9 @@ func TestStatsStreaksAndHeatmap(t *testing.T) {
 
 func TestSettingsRoundTrip(t *testing.T) {
 	c := setup(t, "").signup(t, "ada@example.com")
-	want := store.Settings{Sound: false, Notify: true, AutoBreak: false, Strict: true, Breathe: false, Tick: "ominous"}
+	want := store.DefaultSettings
+	want.Sound, want.Notify, want.AutoBreak, want.Strict, want.Breathe, want.Tick = false, true, false, true, false, "ominous"
+	want.TimeZone, want.WorkdayStart, want.WorkdayEnd, want.MaxBlocksPerDay = "Asia/Kolkata", "08:30", "16:00", 6
 	if code := c.call("PUT", "/api/me/settings", want, nil); code != 200 {
 		t.Fatalf("save: %d", code)
 	}
@@ -421,8 +423,62 @@ func TestSettingsRoundTrip(t *testing.T) {
 	if me.Settings != want {
 		t.Fatalf("settings = %+v", me.Settings)
 	}
-	if code := c.call("PUT", "/api/me/settings", obj{"tick": "loud"}, nil); code != 400 {
-		t.Fatalf("invalid tick: %d, want 400", code)
+	for name, body := range map[string]obj{
+		"invalid tick":      {"tick": "loud", "timeZone": "UTC"},
+		"no time zone":      {"tick": "off"},
+		"server's zone":     {"timeZone": "Local"},
+		"unknown zone":      {"timeZone": "Mars/Olympus"},
+		"bad workday time":  {"timeZone": "UTC", "workdayStart": "9am"},
+		"inverted workday":  {"timeZone": "UTC", "workdayStart": "17:00", "workdayEnd": "09:00"},
+		"zero blocks a day": {"timeZone": "UTC", "maxBlocksPerDay": 0},
+		"negative buffer":   {"timeZone": "UTC", "bufferMin": -5},
+	} {
+		var res obj
+		if code := c.call("PUT", "/api/me/settings", body, &res); code != 400 || res["error"] == "" {
+			t.Errorf("%s: %d %v, want 400", name, code, res)
+		}
+	}
+}
+
+func TestRegistrationStoresTheBrowserTimeZone(t *testing.T) {
+	e := setup(t, "")
+	var user store.User
+	c := e.anonymous(t)
+	if code := c.call("POST", "/api/auth/register", obj{"email": "ada@example.com", "password": "correct horse", "time_zone": "Europe/Berlin"}, &user); code != 201 {
+		t.Fatalf("register: %d", code)
+	}
+	if user.Settings.TimeZone != "Europe/Berlin" || user.Settings.WorkdayStart != "09:00" {
+		t.Fatalf("settings = %+v", user.Settings)
+	}
+	if code := e.anonymous(t).call("POST", "/api/auth/register", obj{"email": "bob@example.com", "password": "correct horse", "time_zone": "Nowhere/Land"}, nil); code != 400 {
+		t.Fatalf("bad zone: %d, want 400", code)
+	}
+}
+
+func TestTaskPlanningFields(t *testing.T) {
+	c := setup(t, "").signup(t, "ada@example.com")
+	var task store.Task
+	if code := c.call("POST", "/api/tasks", obj{"title": "Compiler", "estimate": 3, "due_at": "2026-10-30T17:00:00-05:00", "priority": 2, "energy": "deep"}, &task); code != 201 {
+		t.Fatalf("create: %d", code)
+	}
+	if task.DueAt == nil || !task.DueAt.Equal(time.Date(2026, 10, 30, 22, 0, 0, 0, time.UTC)) || task.Priority != 2 || task.Energy != "deep" {
+		t.Fatalf("task = %+v", task)
+	}
+	c.call("PATCH", "/api/tasks/"+itoa(task.ID), obj{"due_at": "", "priority": 0, "energy": ""}, &task)
+	if task.DueAt != nil || task.Priority != 0 || task.Energy != "" {
+		t.Fatalf("after clearing: %+v", task)
+	}
+	for _, body := range []obj{
+		{"title": "x", "due_at": "next friday"},
+		{"title": "x", "priority": 4},
+		{"title": "x", "energy": "medium"},
+	} {
+		if code := c.call("POST", "/api/tasks", body, nil); code != 400 {
+			t.Errorf("%v: %d, want 400", body, code)
+		}
+	}
+	if code := c.call("PATCH", "/api/tasks/"+itoa(task.ID), obj{"energy": "medium"}, nil); code != 400 {
+		t.Errorf("patch with a bad energy: %d, want 400", code)
 	}
 }
 

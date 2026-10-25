@@ -19,7 +19,7 @@
 
 .task {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto 1fr auto auto auto;
   align-items: center;
   gap: 10px;
   padding: 10px;
@@ -111,4 +111,44 @@
 
 .brew-btn:hover:not(:disabled) {
   transform: translateY(-2px);
+}
+
+.task .icon-btn {
+  width: 28px;
+}
+
+.due,
+.prio,
+.energy {
+  font-size: 0.68rem;
+  color: var(--gray-300);
+}
+
+.due.late,
+.prio {
+  color: var(--danger);
+}
+
+.energy {
+  color: var(--break);
+}
+
+.details {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+  padding-top: 6px;
+}
+
+.details label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.7rem;
+  color: var(--gray-400);
+}
+
+.details .input {
+  padding: 6px 8px;
+  font-size: 0.8rem;
 }

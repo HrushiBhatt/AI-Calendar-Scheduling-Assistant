@@ -12,7 +12,11 @@ import {
   TimerState,
   User,
 } from './models';
-import { localDay } from './time';
+import { browserZone, localDay } from './time';
+
+export type TaskPatch = Partial<Pick<Task, 'title' | 'estimate' | 'done' | 'priority' | 'energy'>> & {
+  due_at?: string; // RFC 3339, or "" to clear
+};
 
 /** Typed client for the Go API. Every call resolves to data or rejects with an HttpErrorResponse. */
 @Injectable({ providedIn: 'root' })
@@ -23,7 +27,7 @@ export class Api {
   me = () => this.get<User>('/api/me');
   login = (email: string, password: string) => this.send<User>('POST', '/api/auth/login', { email, password });
   register = (email: string, password: string, name: string) =>
-    this.send<User>('POST', '/api/auth/register', { email, password, name });
+    this.send<User>('POST', '/api/auth/register', { email, password, name, time_zone: browserZone() });
   logout = () => this.send<void>('POST', '/api/auth/logout');
   saveSettings = (settings: Settings) => this.send<Settings>('PUT', '/api/me/settings', settings);
 
@@ -35,8 +39,7 @@ export class Api {
   // tasks
   tasks = () => this.get<Task[]>('/api/tasks');
   createTask = (title: string, estimate: number) => this.send<Task>('POST', '/api/tasks', { title, estimate });
-  updateTask = (id: number, patch: Partial<Pick<Task, 'title' | 'estimate' | 'done'>>) =>
-    this.send<Task>('PATCH', `/api/tasks/${id}`, patch);
+  updateTask = (id: number, patch: TaskPatch) => this.send<Task>('PATCH', `/api/tasks/${id}`, patch);
   deleteTask = (id: number) => this.send<void>('DELETE', `/api/tasks/${id}`);
 
   // the server-run timer
