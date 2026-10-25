@@ -4,6 +4,9 @@ import { firstValueFrom } from 'rxjs';
 import {
   CalendarAccounts,
   FocusRequest,
+  PlanRequest,
+  PlanResponse,
+  PlanView,
   Preset,
   DaySchedule,
   Session,
@@ -61,6 +64,11 @@ export class Api {
   calendarConnect = () => this.get<{ auth_url: string }>('/api/calendar/connect');
   calendarDisconnect = (id: number) => this.send<void>('DELETE', `/api/calendar/accounts/${id}`);
   calendarSync = () => this.send<CalendarAccounts>('POST', '/api/calendar/sync');
+  // planning
+  requestPlan = (req: PlanRequest) => this.send<PlanResponse>('POST', '/api/assistant/plan', req);
+  livePlans = () => this.get<PlanView[]>('/api/plans/live');
+  plan = (id: number) => this.get<PlanView>(`/api/plans/${id}`);
+
   /** The user's calendar and accepted blocks for local days from..to (inclusive). */
   schedule = (from: string, to = from) => this.get<DaySchedule>(`/api/schedule?from=${from}&to=${to}`);
 

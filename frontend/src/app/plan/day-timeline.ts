@@ -193,8 +193,10 @@ interface Drag {
               [zone]="zone()"
               [class.draggable]="canMove()(b.item)"
               [class.dragging]="drag()?.id === b.item.id"
-              [style.top.px]="b.top + offset(b.item)"
-              [style.height.px]="b.height"
+              [class.dimmed]="dimmed().has(b.item.id)"
+              [compact]="b.height < 56"
+              [style.top.px]="b.top + offset(b.item) + 2"
+              [style.height.px]="b.height - 4"
               [style.left.%]="b.left"
               [style.width.%]="b.width"
               tabindex="0"
@@ -318,6 +320,9 @@ interface Drag {
     .block {
       margin: 0 3px;
     }
+    .block.dimmed {
+      opacity: 0.35;
+    }
     .now {
       position: absolute;
       left: 56px;
@@ -360,6 +365,8 @@ export class DayTimeline {
   readonly events = input<CalendarEvent[]>([]);
   readonly blocks = input<ScheduledBlock[]>([]);
   readonly now = input<number>(Date.now());
+  /** Blocks to draw faded: proposed ones the user unticked. */
+  readonly dimmed = input<ReadonlySet<number>>(new Set());
   /** Which blocks may be dragged or shifted. */
   readonly canMove = input<(b: ScheduledBlock) => boolean>(() => false);
 

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, booleanAttribute, computed, input } from '@angular/core';
 import { ScheduledBlock } from '../core/models';
 import { formatTime } from '../core/zoned';
 
@@ -21,12 +21,19 @@ const STATUS_LABEL: Record<string, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="focus" [style.flex-grow]="block().focus_min">
-      <span class="tag">{{ statusLabel() }}</span>
-      <span class="title">{{ block().intention || 'Focus' }}</span>
+      @if (!compact()) {
+        <span class="tag">{{ statusLabel() }}</span>
+      }
+      <span class="title">
+        @if (compact()) {
+          <span class="tag">{{ statusLabel() }}</span>
+        }
+        {{ block().intention || 'Focus block' }}
+      </span>
       <span class="when">{{ range() }} · {{ block().mode }}</span>
     </div>
     @if (block().rest_min) {
-      <div class="rest" [style.flex-grow]="block().rest_min" aria-hidden="true">rest {{ block().rest_min }}m</div>
+      <div class="rest" [style.flex-grow]="block().rest_min" aria-hidden="true">{{ block().rest_min >= 10 ? 'rest ' + block().rest_min + 'm' : '' }}</div>
     }
     @if (block().explain || block().note) {
       <div class="explain" role="tooltip">
@@ -102,6 +109,16 @@ const STATUS_LABEL: Record<string, string> = {
       text-transform: uppercase;
       opacity: 0.8;
     }
+    :host(.compact) .focus {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      align-content: center;
+      gap: 8px;
+      padding-block: 0;
+    }
+    :host(.compact) .tag {
+      margin-right: 6px;
+    }
     .title {
       overflow: hidden;
       font-size: 0.8rem;
@@ -156,11 +173,14 @@ const STATUS_LABEL: Record<string, string> = {
   `,
   host: {
     '[attr.data-status]': 'block().status',
+    '[class.compact]': 'compact()',
   },
 })
 export class BlockChip {
   readonly block = input.required<ScheduledBlock>();
   readonly zone = input.required<string>();
+  /** One line instead of three, for a block too short to fit them. */
+  readonly compact = input(false, { transform: booleanAttribute });
 
   protected readonly statusLabel = computed(() => STATUS_LABEL[this.block().status] ?? this.block().status);
   protected readonly range = computed(() => {

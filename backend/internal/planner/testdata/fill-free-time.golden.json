@@ -1,0 +1,51 @@
+{
+  "blocks": [
+    {
+      "task_id": null,
+      "task": "",
+      "starts_at": "2026-10-26T11:30:00-04:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 1.8,
+      "explain": "fills a 30-minute gap exactly"
+    },
+    {
+      "task_id": null,
+      "task": "",
+      "starts_at": "2026-10-26T13:00:00-04:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 1.8,
+      "explain": "the earliest open slot that fits"
+    },
+    {
+      "task_id": null,
+      "task": "",
+      "starts_at": "2026-10-26T15:30:00-04:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 1.8,
+      "explain": "leaves time to recover after a long meeting"
+    },
+    {
+      "task_id": null,
+      "task": "",
+      "starts_at": "2026-10-26T16:00:00-04:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 1.8,
+      "explain": "the earliest open slot that fits"
+    }
+  ],
+  "unplaced": [],
+  "notes": [
+    "modes: Pomodoro 25/5",
+    "history: cold start (0 past sessions), so every hour is weighted the same",
+    "day_full: 2026-10-26 (4 blocks, 100 focus minutes)",
+    "placed: 4 blocks, 100 focus minutes"
+  ]
+}

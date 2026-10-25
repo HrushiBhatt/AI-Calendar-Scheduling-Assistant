@@ -164,6 +164,68 @@ export interface ScheduledBlock {
   created_at: string;
 }
 
+export type PlanWindow = 'today' | 'tomorrow' | 'this_week' | 'next_week' | 'custom';
+
+/** A planning request: the form's fields, and the assistant's tool arguments. */
+export interface PlanArgs {
+  window: PlanWindow;
+  start_date?: string;
+  end_date?: string;
+  task_ids?: number[];
+  new_tasks?: string[];
+  total_blocks?: number;
+  blocks_per_task?: number;
+  mode_hint?: string;
+  allow_evening?: boolean;
+  allow_weekend?: boolean;
+  avoid_before?: string;
+  avoid_after?: string;
+}
+
+export type UnplacedReason =
+  | 'no_gap_long_enough'
+  | 'day_cap_reached'
+  | 'due_date_passed'
+  | 'no_slot_before_due'
+  | 'total_blocks_reached';
+
+export interface UnplacedTask {
+  task_id: number | null;
+  task: string;
+  wanted: number;
+  placed: number;
+  reason: UnplacedReason;
+}
+
+export type PlanStatus = 'proposed' | 'accepted' | 'rejected' | 'superseded';
+
+/** A proposal from the scheduler, with its blocks. */
+export interface PlanView {
+  id: number;
+  status: PlanStatus;
+  source: 'assistant' | 'form' | 'quick' | 'conflict';
+  window_start: string;
+  window_end: string;
+  request: string; // the user's words
+  rationale: string; // the assistant's narration
+  unplaced: UnplacedTask[] | null;
+  notes: string[] | null;
+  replaces?: number[] | null;
+  created_at: string;
+  blocks: ScheduledBlock[];
+}
+
+/** POST /api/assistant/plan */
+export interface PlanResponse {
+  plan: PlanView | null;
+  narration: string;
+  degraded: boolean;
+  notice?: string;
+  usage?: { input_tokens: number; output_tokens: number };
+}
+
+export type PlanRequest = { text: string } | { ask: PlanArgs } | { quick: 'fill_today' };
+
 /** GET /api/schedule: one or more of the user's days. */
 export interface DaySchedule {
   from: string;

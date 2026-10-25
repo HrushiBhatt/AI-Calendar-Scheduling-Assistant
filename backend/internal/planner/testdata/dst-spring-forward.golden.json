@@ -1,0 +1,73 @@
+{
+  "blocks": [
+    {
+      "task_id": 1,
+      "task": "Thesis chapter 3",
+      "starts_at": "2026-03-07T09:00:00-05:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 1.8,
+      "explain": "the earliest open slot that fits"
+    },
+    {
+      "task_id": 1,
+      "task": "Thesis chapter 3",
+      "starts_at": "2026-03-07T09:30:00-05:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 2.8,
+      "explain": "right next to your other block for this task"
+    },
+    {
+      "task_id": 1,
+      "task": "Thesis chapter 3",
+      "starts_at": "2026-03-08T09:00:00-04:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 1.8,
+      "explain": "the earliest open slot that fits"
+    },
+    {
+      "task_id": 1,
+      "task": "Thesis chapter 3",
+      "starts_at": "2026-03-08T09:30:00-04:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 2.8,
+      "explain": "right next to your other block for this task"
+    },
+    {
+      "task_id": 1,
+      "task": "Thesis chapter 3",
+      "starts_at": "2026-03-09T09:00:00-04:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 1.8,
+      "explain": "the earliest open slot that fits"
+    },
+    {
+      "task_id": 1,
+      "task": "Thesis chapter 3",
+      "starts_at": "2026-03-09T09:30:00-04:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 2.8,
+      "explain": "right next to your other block for this task"
+    }
+  ],
+  "unplaced": [],
+  "notes": [
+    "modes: Pomodoro 25/5",
+    "history: cold start (0 past sessions), so every hour is weighted the same",
+    "day_full: 2026-03-07 (2 blocks, 50 focus minutes)",
+    "day_full: 2026-03-08 (2 blocks, 50 focus minutes)",
+    "day_full: 2026-03-09 (2 blocks, 50 focus minutes)",
+    "placed: 6 blocks, 150 focus minutes"
+  ]
+}

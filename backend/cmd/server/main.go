@@ -28,6 +28,7 @@ import (
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/demo"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/engine"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/events"
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/plans"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/store"
 )
 
@@ -88,7 +89,7 @@ func run(addr, dbPath, static string) error {
 	srv := &http.Server{
 		Addr: addr,
 		Handler: api.NewRouter(api.Deps{
-			DB: db, Hub: hub, Engine: timers, Calendar: cal,
+			DB: db, Hub: hub, Engine: timers, Calendar: cal, Plans: plans.New(db, hub),
 			Auth: auth.NewManager(secret, os.Getenv("SECURE_COOKIES") == "true"),
 		}, static),
 		ReadHeaderTimeout: 5 * time.Second,

@@ -1,0 +1,28 @@
+{
+  "blocks": [
+    {
+      "task_id": 7,
+      "task": "Compiler project",
+      "starts_at": "2026-10-26T14:00:00-04:00",
+      "focus_min": 50,
+      "rest_min": 10,
+      "mode": "Animedoro",
+      "score": 0.8,
+      "explain": "the only open slot that fits, and fills a 60-minute gap exactly"
+    }
+  ],
+  "unplaced": [
+    {
+      "task_id": 7,
+      "task": "Compiler project",
+      "wanted": 3,
+      "placed": 1,
+      "reason": "no_gap_long_enough"
+    }
+  ],
+  "notes": [
+    "modes: Deep Work 90/20, Animedoro 50/10",
+    "history: cold start (0 past sessions), so every hour is weighted the same",
+    "placed: 1 blocks, 50 focus minutes"
+  ]
+}

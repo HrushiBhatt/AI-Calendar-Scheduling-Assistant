@@ -1,0 +1,40 @@
+{
+  "blocks": [
+    {
+      "task_id": 2,
+      "task": "Register allocator",
+      "starts_at": "2026-10-26T09:00:00-04:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 3.75,
+      "explain": "you finish 90% of blocks you start at this hour, and one of your two strongest hours, kept for deep work"
+    },
+    {
+      "task_id": 2,
+      "task": "Register allocator",
+      "starts_at": "2026-10-26T09:30:00-04:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 4.75,
+      "explain": "right next to your other block for this task, and you finish 90% of blocks you start at this hour"
+    },
+    {
+      "task_id": 1,
+      "task": "Inbox",
+      "starts_at": "2026-10-26T11:00:00-04:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 3.3,
+      "explain": "you finish 60% of blocks you start at this hour, and light work outside your peak hours, so they stay free"
+    }
+  ],
+  "unplaced": [],
+  "notes": [
+    "modes: Pomodoro 25/5",
+    "history: 102 past sessions; strongest hours 09:00 (75%) and 10:00 (72%)",
+    "placed: 3 blocks, 75 focus minutes"
+  ]
+}

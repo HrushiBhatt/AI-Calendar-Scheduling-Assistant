@@ -23,6 +23,7 @@ import (
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/calendar"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/engine"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/events"
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/plans"
 )
 
 // Deps are the long-lived services the HTTP layer uses.
@@ -32,11 +33,14 @@ type Deps struct {
 	Hub      *events.Hub
 	Engine   *engine.Engine
 	Calendar *calendar.Service
+	Plans    *plans.Service
 }
 
 type handler struct {
 	Deps
 	syncLimit *limiter // POST /api/calendar/sync: once a minute per user
+	planLimit *limiter // POST /api/assistant/plan, per user
+	planIP    *limiter // and per address
 }
 
 // NewRouter wires every /api route. When staticDir is set it also serves the built
@@ -46,7 +50,7 @@ func NewRouter(d Deps, staticDir string) *gin.Engine {
 	r.Use(gin.Logger(), gin.Recovery())
 	_ = r.SetTrustedProxies(nil)
 
-	h := &handler{Deps: d, syncLimit: newLimiter(1, time.Minute)}
+	h := &handler{Deps: d, syncLimit: newLimiter(1, time.Minute), planLimit: newLimiter(20, time.Minute), planIP: newLimiter(60, time.Minute)}
 	api := r.Group("/api")
 	api.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"ok": true}) })
 	api.POST("/auth/register", h.register)
@@ -83,6 +87,10 @@ func NewRouter(d Deps, staticDir string) *gin.Engine {
 	my.DELETE("/calendar/accounts/:id", h.calendarDisconnect)
 	my.POST("/calendar/sync", perUser(h.syncLimit, "sync"), h.calendarSync)
 	my.GET("/schedule", h.schedule)
+
+	my.POST("/assistant/plan", perIP(h.planIP, "plan"), perUser(h.planLimit, "plan"), h.requestPlan)
+	my.GET("/plans/live", h.livePlans)
+	my.GET("/plans/:id", h.getPlan)
 
 	r.NoRoute(func(c *gin.Context) {
 		isRead := c.Request.Method == http.MethodGet || c.Request.Method == http.MethodHead

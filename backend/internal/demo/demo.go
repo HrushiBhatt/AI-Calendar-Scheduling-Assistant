@@ -96,9 +96,10 @@ func seedWork(db *gorm.DB, userID uint, now time.Time, loc *time.Location) error
 			if !completed {
 				focused = 300 + rng.IntN(900)
 			}
-			task := tasks[rng.IntN(len(tasks))].ID
+			// Untasked: the history is for the hour-of-day profile, and shouldn't use up the
+			// estimates of the tasks the demo is about to plan.
 			sessions = append(sessions, store.Session{
-				UserID: userID, TaskID: &task, Mode: "Pomodoro", Planned: 1500, Focused: focused, Completed: completed,
+				UserID: userID, Mode: "Pomodoro", Planned: 1500, Focused: focused, Completed: completed,
 				Day: start.Format("2006-01-02"), State: store.StateDone, CreatedAt: start.UTC(),
 			})
 		}
