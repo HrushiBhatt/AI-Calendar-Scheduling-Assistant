@@ -170,6 +170,9 @@ type CalendarAccount struct {
 	RefreshToken []byte    `json:"-" gorm:"serializer:sealed;not null"`  // AES-GCM sealed
 	Expiry       time.Time `json:"-"`
 	SyncToken    string    `json:"-" gorm:"size:512"` // Google's incremental sync cursor
+	// FullSyncAt is the last full pull. Incremental sync only reports changed events, so an
+	// old event drifting into the 60-day window would never arrive; a weekly full pull fixes that.
+	FullSyncAt *time.Time `json:"-"`
 	// Push notifications. Google echoes ChannelToken in X-Goog-Channel-Token, which is how
 	// the unauthenticated webhook tells a real notification from a forged one.
 	ChannelID       string     `json:"-" gorm:"size:64;index"`

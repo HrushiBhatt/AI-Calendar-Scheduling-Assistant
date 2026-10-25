@@ -9,6 +9,11 @@ const EVENT_TYPES: LiveEvent['type'][] = [
   'break.completed',
   'session.reflected',
   'changed',
+  'calendar.synced',
+  'plan.proposed',
+  'plan.accepted',
+  'plan.conflict',
+  'scheduled.starting',
 ];
 
 /**

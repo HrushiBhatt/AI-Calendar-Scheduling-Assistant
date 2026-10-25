@@ -20,6 +20,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/auth"
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/calendar"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/engine"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/events"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/store"
@@ -28,7 +29,11 @@ import (
 type env struct {
 	server *httptest.Server
 	db     *gorm.DB
+	fake   *calendar.Fake
+	cal    *calendar.Service
 }
+
+const sealKey = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
 
 func setup(t *testing.T, staticDir string) *env {
 	t.Helper()
@@ -36,19 +41,24 @@ func setup(t *testing.T, staticDir string) *env {
 	gin.SetMode(gin.TestMode)
 	gin.DefaultWriter = io.Discard
 
+	if err := store.SetSealKey(sealKey); err != nil {
+		t.Fatal(err)
+	}
 	db, err := store.Open(":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
 	hub := events.NewHub()
 	go hub.Run(t.Context())
+	fake := calendar.NewFake("fake", "ada@gmail.example")
+	cal := calendar.NewService(db, hub, calendar.Options{Providers: []calendar.Provider{fake}, ConnectVia: "fake"})
 	router := NewRouter(Deps{
-		DB: db, Hub: hub, Engine: engine.New(t.Context(), db, hub),
+		DB: db, Hub: hub, Engine: engine.New(t.Context(), db, hub), Calendar: cal,
 		Auth: auth.NewManager([]byte("test-secret"), false),
 	}, staticDir)
 	server := httptest.NewServer(router)
 	t.Cleanup(server.Close)
-	return &env{server, db}
+	return &env{server: server, db: db, fake: fake, cal: cal}
 }
 
 // client is one browser: it keeps its own login cookie.

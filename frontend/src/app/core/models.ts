@@ -116,6 +116,63 @@ export interface Completed {
   unlocked?: string; // café decoration earned
 }
 
+// ---- calendars & planning ------------------------------------------------------------
+
+export interface CalendarAccount {
+  id: number;
+  provider: string;
+  external_id: string; // the account's email
+  last_sync_at: string | null;
+  sync_error: string;
+  created_at: string;
+}
+
+export interface CalendarAccounts {
+  configured: boolean;
+  provider: string;
+  accounts: CalendarAccount[];
+}
+
+/** A meeting (or other event) from a connected calendar. */
+export interface CalendarEvent {
+  id: number;
+  title: string;
+  starts_at: string;
+  ends_at: string;
+  all_day: boolean;
+  busy: boolean;
+}
+
+export type BlockStatus = 'proposed' | 'accepted' | 'rejected' | 'started' | 'done' | 'skipped' | 'conflicted';
+
+/** One planned focus block. */
+export interface ScheduledBlock {
+  id: number;
+  plan_id: number;
+  task_id: number | null;
+  new_task: boolean;
+  session_id: number | null;
+  mode: string;
+  starts_at: string;
+  focus_min: number;
+  rest_min: number;
+  intention: string;
+  status: BlockStatus;
+  explain: string;
+  score: number;
+  note: string;
+  created_at: string;
+}
+
+/** GET /api/schedule: one or more of the user's days. */
+export interface DaySchedule {
+  from: string;
+  to: string;
+  time_zone: string;
+  events: CalendarEvent[];
+  blocks: ScheduledBlock[];
+}
+
 /** Everything the server pushes over /api/events. */
 export type LiveEvent =
   | { type: 'timer'; data: TimerState }
@@ -123,4 +180,9 @@ export type LiveEvent =
   | { type: 'session.discarded'; data: null }
   | { type: 'break.completed'; data: { completed: boolean } }
   | { type: 'session.reflected'; data: { id: number } }
-  | { type: 'changed'; data: { kind: 'presets' | 'tasks' | 'sessions' | 'settings' } };
+  | { type: 'changed'; data: { kind: 'presets' | 'tasks' | 'sessions' | 'settings' | 'schedule' } }
+  | { type: 'calendar.synced'; data: { account_id: number; changed: number } }
+  | { type: 'plan.proposed'; data: { plan_id: number } }
+  | { type: 'plan.accepted'; data: { plan_id: number; block_ids: number[] } }
+  | { type: 'plan.conflict'; data: { plan_id: number; block_ids: number[]; replacement_plan_id: number | null } }
+  | { type: 'scheduled.starting'; data: { scheduled_id: number; starts_at: string } };

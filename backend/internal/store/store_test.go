@@ -59,6 +59,9 @@ func TestSealedFieldsFailClosedWithoutTheRightKey(t *testing.T) {
 	if !errors.Is(err, ErrNoSealKey) {
 		t.Fatalf("writing without a key: %v, want ErrNoSealKey", err)
 	}
+	if err := db.Create(&CalendarAccount{UserID: 1, Provider: "demo", ExternalID: "demo", AccessToken: []byte{}, RefreshToken: []byte{}}).Error; err != nil {
+		t.Fatalf("an account without tokens needs no key: %v", err)
+	}
 
 	_ = SetSealKey(testKey)
 	acct := CalendarAccount{UserID: 1, Provider: "google", ExternalID: "x", AccessToken: []byte("ya29.plaintext"), RefreshToken: []byte("1//plaintext")}

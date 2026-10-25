@@ -2,7 +2,8 @@
 
 # Secrets and local config (JWT_SECRET, ...) come from an untracked .env; see .env.example.
 -include .env
-export JWT_SECRET SECURE_COOKIES ADDR DB_PATH
+export JWT_SECRET SECURE_COOKIES ADDR DB_PATH GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_REDIRECT_URL \
+	CALENDAR_ENC_KEY PUBLIC_URL ANTHROPIC_API_KEY ASSISTANT_MODEL ASSISTANT_DAILY_TOKENS DEMO CALENDAR_PROVIDER
 
 # Switch to the Node version in .nvmrc (Angular 22 needs 24.15+) when nvm is installed, so
 # frontend targets work even in a terminal still holding an older Node on its PATH.

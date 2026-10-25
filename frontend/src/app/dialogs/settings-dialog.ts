@@ -4,6 +4,7 @@ import { Brew } from '../core/brew';
 import { Settings } from '../core/models';
 import { browserZone } from '../core/time';
 import { Modal } from '../shared/modal';
+import { CalendarSettings } from './calendar-settings';
 
 type Toggle = 'sound' | 'notify' | 'autoBreak' | 'strict';
 type NumberSetting = 'bufferMin' | 'minGapMin' | 'maxBlocksPerDay' | 'maxFocusMinPerDay';
@@ -36,7 +37,7 @@ function zones(): string[] {
 
 @Component({
   selector: 'app-settings-dialog',
-  imports: [Modal],
+  imports: [Modal, CalendarSettings],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-modal title="Settings" (closed)="brew.dialog.set(null)">
@@ -94,6 +95,8 @@ function zones(): string[] {
             <input type="checkbox" class="switch" [checked]="brew.settings().assistantEnabled" (change)="flag('assistantEnabled', $event)" />
           </label>
         </section>
+
+        <app-calendar-settings />
 
         <p class="setting-hint">Settings are saved to your account, so they follow you to every device.</p>
         <p class="shortcuts"><kbd>Space</kbd> start / pause · <kbd>R</kbd> reset · <kbd>S</kbd> finish or skip</p>

@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -19,19 +20,24 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/auth"
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/calendar"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/engine"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/events"
 )
 
 // Deps are the long-lived services the HTTP layer uses.
 type Deps struct {
-	DB     *gorm.DB
-	Auth   *auth.Manager
-	Hub    *events.Hub
-	Engine *engine.Engine
+	DB       *gorm.DB
+	Auth     *auth.Manager
+	Hub      *events.Hub
+	Engine   *engine.Engine
+	Calendar *calendar.Service
 }
 
-type handler struct{ Deps }
+type handler struct {
+	Deps
+	syncLimit *limiter // POST /api/calendar/sync: once a minute per user
+}
 
 // NewRouter wires every /api route. When staticDir is set it also serves the built
 // Angular app from that directory, falling back to index.html for client-side routes.
@@ -40,7 +46,7 @@ func NewRouter(d Deps, staticDir string) *gin.Engine {
 	r.Use(gin.Logger(), gin.Recovery())
 	_ = r.SetTrustedProxies(nil)
 
-	h := &handler{d}
+	h := &handler{Deps: d, syncLimit: newLimiter(1, time.Minute)}
 	api := r.Group("/api")
 	api.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"ok": true}) })
 	api.POST("/auth/register", h.register)
@@ -68,6 +74,15 @@ func NewRouter(d Deps, staticDir string) *gin.Engine {
 	my.PATCH("/sessions/:id", h.reflect)
 	my.DELETE("/sessions", h.clearSessions)
 	my.GET("/stats", h.stats)
+
+	// Google's push webhook has no session: it is verified by channel ID and token instead.
+	api.POST("/calendar/push", h.calendarPush)
+	my.GET("/calendar/connect", h.calendarConnect)
+	my.GET("/calendar/callback", h.calendarCallback)
+	my.GET("/calendar/accounts", h.calendarAccounts)
+	my.DELETE("/calendar/accounts/:id", h.calendarDisconnect)
+	my.POST("/calendar/sync", perUser(h.syncLimit, "sync"), h.calendarSync)
+	my.GET("/schedule", h.schedule)
 
 	r.NoRoute(func(c *gin.Context) {
 		isRead := c.Request.Method == http.MethodGet || c.Request.Method == http.MethodHead

@@ -2,8 +2,10 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import {
+  CalendarAccounts,
   FocusRequest,
   Preset,
+  DaySchedule,
   Session,
   Settings,
   Stats,
@@ -53,6 +55,14 @@ export class Api {
   reflect = (id: number, reflection: string) => this.send<Session>('PATCH', `/api/sessions/${id}`, { reflection });
   clearSessions = () => this.send<void>('DELETE', '/api/sessions');
   stats = () => this.get<Stats>(`/api/stats?today=${localDay()}`);
+
+  // calendars
+  calendarAccounts = () => this.get<CalendarAccounts>('/api/calendar/accounts');
+  calendarConnect = () => this.get<{ auth_url: string }>('/api/calendar/connect');
+  calendarDisconnect = (id: number) => this.send<void>('DELETE', `/api/calendar/accounts/${id}`);
+  calendarSync = () => this.send<CalendarAccounts>('POST', '/api/calendar/sync');
+  /** The user's calendar and accepted blocks for local days from..to (inclusive). */
+  schedule = (from: string, to = from) => this.get<DaySchedule>(`/api/schedule?from=${from}&to=${to}`);
 
   private get<T>(url: string): Promise<T> {
     return firstValueFrom(this.http.get<T>(url));

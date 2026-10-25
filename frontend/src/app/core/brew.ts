@@ -31,7 +31,7 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 export type Dialog = 'intention' | 'breathe' | 'reflect' | 'settings' | null;
-type Resource = 'presets' | 'tasks' | 'sessions' | 'settings';
+type Resource = 'presets' | 'tasks' | 'sessions' | 'settings' | 'schedule';
 
 /**
  * The session flow and the user's productivity data. It turns live server events

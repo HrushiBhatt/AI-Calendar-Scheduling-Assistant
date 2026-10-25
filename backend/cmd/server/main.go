@@ -4,7 +4,8 @@
 //	go run ./cmd/server -static ../frontend/dist/brew-focus/browser
 //
 // Environment: JWT_SECRET signs login cookies (required in production),
-// SECURE_COOKIES=true when served over HTTPS.
+// SECURE_COOKIES=true when served over HTTPS. Calendar, assistant and push settings are
+// read in config.go; each feature is optional and the app runs with none of them set.
 package main
 
 import (
@@ -23,6 +24,8 @@ import (
 
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/api"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/auth"
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/calendar"
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/demo"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/engine"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/events"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/store"
@@ -47,8 +50,15 @@ func run(addr, dbPath, static string) error {
 		log.Print("JWT_SECRET not set: using a random key, so everyone is logged out when the server restarts")
 	}
 
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
 	db, err := store.Open(dbPath)
 	if err != nil {
+		return err
+	}
+	if err := cfg.checkSealedAccounts(db); err != nil {
 		return err
 	}
 
@@ -65,10 +75,20 @@ func run(addr, dbPath, static string) error {
 		return err
 	}
 
+	cal := calendar.NewService(db, hub, cfg.calendarOptions())
+	if os.Getenv("DEMO") == "true" {
+		if err := demo.Seed(ctx, db, cal, demoCalendar, time.Now()); err != nil {
+			return err
+		}
+		log.Printf("demo: sign in as %s / %s", demo.Email, demo.Password)
+	}
+	g.Go(func() error { return cal.Run(ctx) })        // debounced syncs, or polling without PUBLIC_URL
+	g.Go(func() error { return cal.RunRenewer(ctx) }) // push channels expire after about a week
+
 	srv := &http.Server{
 		Addr: addr,
 		Handler: api.NewRouter(api.Deps{
-			DB: db, Hub: hub, Engine: timers,
+			DB: db, Hub: hub, Engine: timers, Calendar: cal,
 			Auth: auth.NewManager(secret, os.Getenv("SECURE_COOKIES") == "true"),
 		}, static),
 		ReadHeaderTimeout: 5 * time.Second,

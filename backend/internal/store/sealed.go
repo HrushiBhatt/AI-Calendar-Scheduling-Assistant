@@ -61,6 +61,9 @@ func (SealedSerializer) Value(_ context.Context, field *schema.Field, _ reflect.
 	if !ok {
 		return nil, fmt.Errorf("sealed: %s must be []byte", field.Name)
 	}
+	if len(plain) == 0 {
+		return []byte{}, nil // nothing to protect: the demo account has no tokens, and needs no key
+	}
 	aead := sealKey.Load()
 	if aead == nil {
 		return nil, ErrNoSealKey
