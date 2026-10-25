@@ -50,6 +50,9 @@ const EXAMPLES = [
             (keydown.meta.enter)="sendText()"
             (keydown.control.enter)="sendText()"
           ></textarea>
+          @if (reply(); as r) {
+            <p class="reply" role="status"><span class="label">Assistant</span> {{ r }}</p>
+          }
           <p class="hint">The assistant only reads your request. The scheduler picks every time, around your real meetings.</p>
           <button class="btn btn-primary px" [disabled]="assistant.pending() || !text().trim()">
             {{ assistant.pending() ? 'Planning…' : 'Plan it' }}
@@ -151,6 +154,19 @@ const EXAMPLES = [
       width: 100%;
       margin-top: 18px;
     }
+    .reply {
+      padding: 8px 10px;
+      font-size: 0.82rem;
+      background: var(--gray-850);
+      border-left: 3px solid var(--break);
+    }
+    .reply .label {
+      margin-right: 6px;
+      font-family: var(--font-pixel);
+      font-size: 0.42rem;
+      color: var(--break);
+      text-transform: uppercase;
+    }
     textarea {
       min-height: 84px;
     }
@@ -166,6 +182,8 @@ export class PlanComposer {
   protected readonly today = inject(Schedule).today; // in the user's zone, not the browser's
   protected readonly useForm = signal(false);
   protected readonly text = signal('');
+  /** What the assistant said when it didn't make a plan (the request wasn't about planning). */
+  protected readonly reply = signal('');
 
   protected readonly window = signal<PlanWindow>('tomorrow');
   protected readonly start = signal('');
@@ -196,11 +214,15 @@ export class PlanComposer {
   protected async sendText(): Promise<void> {
     const text = this.text().trim();
     if (!text || this.assistant.pending()) return;
+    this.reply.set('');
     const res = await this.assistant.request({ text });
-    if (res) {
-      this.text.set('');
-      this.planned.emit(res);
+    if (!res) return;
+    if (!res.plan) {
+      this.reply.set(res.narration || 'I can plan focus time around your meetings. Try: three blocks tomorrow.');
+      return;
     }
+    this.text.set('');
+    this.planned.emit(res);
   }
 
   protected async sendForm(): Promise<void> {

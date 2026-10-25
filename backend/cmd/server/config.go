@@ -6,11 +6,17 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
+	"github.com/anthropics/anthropic-sdk-go"
+	"github.com/anthropics/anthropic-sdk-go/option"
 	"gorm.io/gorm"
 
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/assistant"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/calendar"
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/plans"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/store"
 )
 
@@ -21,15 +27,31 @@ type config struct {
 	googleID, googleSecret, googleRedirect string
 	calendarProvider                       string // "fake" connects to an in-memory calendar (end-to-end tests)
 	publicURL                              string
+	anthropicKey                           string
+	assistantProvider                      string // "stub" uses the phrase-matching stand-in (end-to-end tests)
+	assistant                              assistant.Options
 }
 
 func loadConfig() (*config, error) {
 	c := &config{
-		googleID:         os.Getenv("GOOGLE_CLIENT_ID"),
-		googleSecret:     os.Getenv("GOOGLE_CLIENT_SECRET"),
-		googleRedirect:   os.Getenv("GOOGLE_REDIRECT_URL"),
-		calendarProvider: os.Getenv("CALENDAR_PROVIDER"),
-		publicURL:        strings.TrimRight(os.Getenv("PUBLIC_URL"), "/"),
+		googleID:          os.Getenv("GOOGLE_CLIENT_ID"),
+		googleSecret:      os.Getenv("GOOGLE_CLIENT_SECRET"),
+		googleRedirect:    os.Getenv("GOOGLE_REDIRECT_URL"),
+		calendarProvider:  os.Getenv("CALENDAR_PROVIDER"),
+		publicURL:         strings.TrimRight(os.Getenv("PUBLIC_URL"), "/"),
+		anthropicKey:      os.Getenv("ANTHROPIC_API_KEY"),
+		assistantProvider: os.Getenv("ASSISTANT_PROVIDER"),
+		assistant:         assistant.Options{Model: os.Getenv("ASSISTANT_MODEL"), Effort: os.Getenv("ASSISTANT_EFFORT")},
+	}
+	if raw := os.Getenv("ASSISTANT_DAILY_TOKENS"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n <= 0 {
+			return nil, errors.New("ASSISTANT_DAILY_TOKENS must be a positive whole number")
+		}
+		c.assistant.DailyTokens = n
+	}
+	if c.assistantProvider != "" && c.assistantProvider != "stub" {
+		return nil, fmt.Errorf("ASSISTANT_PROVIDER must be empty or \"stub\", not %q", c.assistantProvider)
 	}
 	set := 0
 	for _, v := range []string{c.googleID, c.googleSecret, c.googleRedirect} {
@@ -66,7 +88,32 @@ func loadConfig() (*config, error) {
 	if c.publicURL == "" {
 		log.Printf("calendar: PUBLIC_URL not set, so calendars are polled every %v instead of pushed", calendar.PollEvery)
 	}
+	switch {
+	case c.anthropicKey != "":
+		model := c.assistant.Model
+		if model == "" {
+			model = assistant.DefaultModel
+		}
+		log.Printf("assistant: enabled with %s", model)
+	case c.assistantProvider == "stub":
+		log.Print("assistant: ASSISTANT_PROVIDER=stub, using the phrase-matching stand-in (not a model)")
+	default:
+		log.Print("assistant: no ANTHROPIC_API_KEY, so plain-language requests fall back to the planning form")
+	}
 	return c, nil
+}
+
+// newAssistant builds the assistant, or returns nil when there is none to build.
+func (c *config) newAssistant(db *gorm.DB, planSvc *plans.Service) *assistant.Assistant {
+	switch {
+	case c.anthropicKey != "":
+		// One retry, then the degraded path; a slow request gives up rather than hanging.
+		client := anthropic.NewClient(option.WithAPIKey(c.anthropicKey), option.WithMaxRetries(1), option.WithRequestTimeout(20*time.Second))
+		return assistant.New(&client.Messages, db, planSvc, c.assistant)
+	case c.assistantProvider == "stub":
+		return assistant.New(assistant.Stub{}, db, planSvc, c.assistant)
+	}
+	return nil
 }
 
 func (c *config) google() bool { return c.googleID != "" }

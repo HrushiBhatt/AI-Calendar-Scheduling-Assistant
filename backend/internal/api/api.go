@@ -19,6 +19,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/assistant"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/auth"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/calendar"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/engine"
@@ -36,6 +37,7 @@ type Deps struct {
 	Calendar   *calendar.Service
 	Plans      *plans.Service
 	Dispatcher *scheduler.Dispatcher
+	Assistant  *assistant.Assistant // nil without an Anthropic key: the form path takes over
 }
 
 type handler struct {

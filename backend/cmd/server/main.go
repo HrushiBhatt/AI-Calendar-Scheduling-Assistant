@@ -96,7 +96,8 @@ func run(addr, dbPath, static string) error {
 		Addr: addr,
 		Handler: api.NewRouter(api.Deps{
 			DB: db, Hub: hub, Engine: timers, Calendar: cal, Plans: planSvc, Dispatcher: dispatcher,
-			Auth: auth.NewManager(secret, os.Getenv("SECURE_COOKIES") == "true"),
+			Assistant: cfg.newAssistant(db, planSvc),
+			Auth:      auth.NewManager(secret, os.Getenv("SECURE_COOKIES") == "true"),
 		}, static),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
