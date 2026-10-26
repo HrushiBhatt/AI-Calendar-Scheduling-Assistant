@@ -71,20 +71,12 @@ const SOURCE_TITLE: Record<PlanView['source'], string> = {
         <p class="empty">Nothing fit in that window.</p>
       }
 
-      @if (unplaced().length || waiting().length) {
+      @if (unplaced().length) {
         <div class="unplaced">
           <h3>Didn’t fit</h3>
           <ul>
-            @for (u of unplaced(); track $index) {
-              <li>
-                <b>{{ u.task || 'Focus time' }}</b>: {{ u.placed }} of {{ u.wanted }} placed, because {{ reason(u.reason) }}.
-              </li>
-            }
-            @if (waiting().length) {
-              <li class="waiting" [title]="waitingTitles()">
-                {{ waiting().length }} other open {{ waiting().length === 1 ? 'task waits' : 'tasks wait' }} for a later plan: this one is
-                full at the number of blocks you asked for.
-              </li>
+            @for (line of unplaced(); track $index) {
+              <li [title]="line.title">{{ line.text }}</li>
             }
           </ul>
         </div>
@@ -246,11 +238,33 @@ export class PlanReview {
 
   protected readonly title = computed(() => SOURCE_TITLE[this.plan().source]);
   protected readonly chosen = computed(() => this.plan().blocks.filter((b) => !this.excluded().has(b.id)).length);
-  /** Tasks with a real reason to report. Open tasks the request never reached are summed up in one line. */
-  protected readonly unplaced = computed(() => (this.plan().unplaced ?? []).filter((u) => !this.untouched(u)));
-  protected readonly waiting = computed(() => (this.plan().unplaced ?? []).filter((u) => this.untouched(u)));
-  protected readonly waitingTitles = computed(() => this.waiting().map((u) => u.task).join(', '));
-  private readonly untouched = (u: { placed: number; reason: string }) => u.placed === 0 && u.reason === 'total_blocks_reached';
+  /**
+   * What didn't fit, one line per task that got some of its blocks, and one line per
+   * reason for the tasks that got none: four open tasks crowded out by the same full day
+   * read better as one sentence than four.
+   */
+  protected readonly unplaced = computed(() => {
+    const lines: { text: string; title: string }[] = [];
+    const none = new Map<string, string[]>();
+    for (const u of this.plan().unplaced ?? []) {
+      const task = u.task || 'Focus time';
+      if (u.placed > 0) {
+        lines.push({ text: `${task}: ${u.placed} of ${u.wanted} placed, because ${this.reason(u.reason)}.`, title: '' });
+      } else {
+        none.set(u.reason, [...(none.get(u.reason) ?? []), task]);
+      }
+    }
+    for (const [reason, tasks] of none) {
+      const names = tasks.length <= 2 ? tasks.join(' and ') : `${tasks.length} tasks`;
+      const text =
+        reason === 'total_blocks_reached'
+          ? `${names} ${tasks.length === 1 ? 'waits' : 'wait'} for a later plan: this one is full at the number of blocks you asked for.`
+          : `${names}: none placed, because ${this.reason(reason as keyof typeof UNPLACED_TEXT)}.`;
+      lines.push({ text, title: tasks.join(', ') });
+    }
+    return lines;
+  });
+
   protected readonly days = computed(() => {
     const groups: { day: string; label: string; blocks: ScheduledBlock[] }[] = [];
     for (const b of this.plan().blocks) {

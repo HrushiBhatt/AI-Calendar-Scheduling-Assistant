@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -18,7 +21,11 @@ jobs:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
       - run: go vet ./...
-      - run: go test -race ./... # the engine and hub are concurrent, so always test under the race detector
+      - run: go vet -tags evals ./internal/assistant # the eval runner compiles, though CI never runs it
+      - run: go test -race ./... # the engine, hub, dispatcher and syncer are concurrent: always -race
+      # The Google and Anthropic SDKs bring a large dependency tree; check what's reachable.
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+      - run: go run github.com/securego/gosec/v2/cmd/gosec@v2.29.0 -quiet ./...
 
   frontend:
     runs-on: ubuntu-latest
@@ -36,9 +43,45 @@ jobs:
       - run: npx ng test --watch=false
       - run: npx ng build
 
+  # One browser test of the whole planning loop against the real server, with the calendar
+  # and the model swapped for in-process doubles (see frontend/playwright.config.ts).
+  e2e:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-traces
+          path: frontend/test-results
+          retention-days: 7
+
   image:
     needs: [backend, frontend]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - run: docker build -t brew-focus .
+      - name: Scan the image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: brew-focus
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'

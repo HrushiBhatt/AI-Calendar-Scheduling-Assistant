@@ -17,7 +17,10 @@ RUN go mod download
 COPY backend/ ./
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /brewfocus ./cmd/server && mkdir /data
 
-# 3. A minimal, non-root runtime.
+# 3. A minimal, non-root runtime. The server makes outbound TLS calls to Google and
+# Anthropic, so the base must carry CA certificates: distroless "static" does (it is
+# "static" plus ca-certificates, tzdata and a nonroot user). The binary also embeds Go's
+# zone database (time/tzdata), so each user's IANA zone resolves on any base.
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=api /brewfocus /brewfocus
 COPY --from=api --chown=nonroot:nonroot /data /data

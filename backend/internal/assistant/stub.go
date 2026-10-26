@@ -72,7 +72,11 @@ func stubNarrate(r *anthropic.ToolResultBlockParam) (*anthropic.Message, error) 
 		Unplaced []json.RawMessage `json:"unplaced"`
 	}
 	if !r.IsError.Value && json.Unmarshal([]byte(body), &res) == nil {
-		text = fmt.Sprintf("Planned %d focus blocks (stub assistant).", len(res.Blocks))
+		noun := "blocks"
+		if len(res.Blocks) == 1 {
+			noun = "block"
+		}
+		text = fmt.Sprintf("Planned %d focus %s (stub assistant).", len(res.Blocks), noun)
 		if len(res.Unplaced) > 0 {
 			text += fmt.Sprintf(" %d task(s) didn't fully fit.", len(res.Unplaced))
 		}

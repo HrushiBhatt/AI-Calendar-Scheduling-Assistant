@@ -20,6 +20,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	_ "time/tzdata" // every user's IANA zone resolves, whatever the container ships
 
 	"golang.org/x/sync/errgroup"
 

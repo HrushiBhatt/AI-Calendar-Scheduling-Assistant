@@ -146,8 +146,10 @@ func (p *planner) explain(c *cand, j *job, t terms) string {
 			add(1.5, "high priority, so it goes early")
 		}
 	}
+	// A good completion rate is a reason to pick an hour; a poor one isn't, so only a
+	// strong hour is quoted.
 	h := p.in.History.Hours[c.hour]
-	if h.Sessions >= 3 {
+	if h.Sessions >= 3 && float64(h.Completed)/float64(h.Sessions) >= 0.6 {
 		add(1+t.history, "you finish %.0f%% of blocks you start at this hour", 100*float64(h.Completed)/float64(h.Sessions))
 	}
 	if t.fatigue == 0 && p.followsMeeting(c.start) {
