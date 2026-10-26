@@ -71,6 +71,9 @@ func loadConfig() (*config, error) {
 	if c.calendarProvider != "" && c.calendarProvider != "fake" {
 		return nil, fmt.Errorf("CALENDAR_PROVIDER must be empty or \"fake\", not %q", c.calendarProvider)
 	}
+	if c.calendarProvider == "fake" && !store.HasSealKey() {
+		return nil, errors.New("CALENDAR_ENC_KEY is required with CALENDAR_PROVIDER=fake too: its tokens are sealed like real ones")
+	}
 	if c.publicURL != "" {
 		u, err := url.Parse(c.publicURL)
 		if err != nil || u.Scheme != "https" || u.Host == "" {

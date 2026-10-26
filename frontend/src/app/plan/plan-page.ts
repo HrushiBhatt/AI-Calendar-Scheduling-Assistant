@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { Api, errorMessage } from '../core/api';
 import { Assistant } from '../core/assistant';
 import { Brew } from '../core/brew';
@@ -178,6 +179,10 @@ export class PlanPage {
   });
 
   constructor() {
+    // /plan?day=YYYY-MM-DD opens that day.
+    const day = inject(ActivatedRoute).snapshot.queryParamMap.get('day');
+    if (day && /^\d{4}-\d{2}-\d{2}$/.test(day)) this.schedule.show(day);
+
     // A new proposal (from this tab or another) starts with every block ticked.
     const ids = computed(() => `${this.assistant.proposal()?.id}:${this.assistant.conflict()?.id}`);
     effect(() => {

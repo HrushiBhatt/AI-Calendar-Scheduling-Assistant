@@ -2,6 +2,8 @@ module github.com/HrushiBhatt/Productivity-Manager/backend
 
 go 1.27.1
 
+toolchain go1.27.3
+
 require (
 	github.com/anthropics/anthropic-sdk-go v1.84.0
 	github.com/gin-gonic/gin v1.12.0
@@ -53,7 +55,7 @@ require (
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
-	github.com/quic-go/quic-go v0.59.0 // indirect
+	github.com/quic-go/quic-go v0.59.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/standard-webhooks/standard-webhooks/libraries v0.0.1 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect

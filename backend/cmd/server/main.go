@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -94,6 +95,9 @@ func run(addr, dbPath, static string) error {
 			log.Printf("plans: reconciling user %d: %v", userID, err)
 		}
 	}
+	writer := cal.NewWriter() // copies accepted blocks to a "Brew Focus" calendar when write-back is on
+	planSvc.Calendar = writer
+	g.Go(func() error { return writer.Run(ctx) })
 	dispatcher := scheduler.New(db, hub, timers)
 	planSvc.OnChange = dispatcher.Wake // a block accepted one minute out still gets its warning
 	g.Go(func() error { dispatcher.Run(ctx.Done()); return nil })
@@ -108,7 +112,11 @@ func run(addr, dbPath, static string) error {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	g.Go(func() error {
-		log.Printf("Brew Focus listening on http://localhost%s", addr)
+		host := addr
+		if strings.HasPrefix(addr, ":") {
+			host = "localhost" + addr
+		}
+		log.Printf("Brew Focus listening on http://%s", host)
 		if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}

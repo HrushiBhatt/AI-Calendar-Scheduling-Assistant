@@ -28,7 +28,7 @@ func (e *ConflictError) Error() string { return e.Msg }
 // is now: a meeting may have landed on it since the plan was made. Tasks the user named
 // that didn't exist are created now, not when the plan was proposed.
 func (s *Service) Accept(userID, planID uint, blockIDs []uint) (*View, error) {
-	var accepted []uint
+	var accepted, replaced []uint
 	createdTasks := false
 	err := s.DB.Transaction(func(tx *gorm.DB) error {
 		var plan store.Plan
@@ -92,6 +92,10 @@ func (s *Service) Accept(userID, planID uint, blockIDs []uint) (*View, error) {
 		}
 		if len(plan.Replaces) > 0 {
 			if err := tx.Model(&store.ScheduledSession{}).Where("id IN ? AND user_id = ? AND status = ?", plan.Replaces, userID, store.BlockConflicted).
+				Pluck("id", &replaced).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(&store.ScheduledSession{}).Where("id IN ?", replaced).
 				Updates(map[string]any{"status": store.BlockSkipped, "note": fmt.Sprintf("replaced by plan %d after a calendar change", plan.ID)}).Error; err != nil {
 				return err
 			}
@@ -108,6 +112,9 @@ func (s *Service) Accept(userID, planID uint, blockIDs []uint) (*View, error) {
 	if s.Calendar != nil {
 		for _, id := range accepted {
 			s.Calendar.Upsert(userID, id)
+		}
+		for _, id := range replaced {
+			s.Calendar.Remove(userID, id)
 		}
 	}
 	s.changed()
@@ -335,4 +342,21 @@ func findOrCreateTask(tx *gorm.DB, userID uint, title string, estimate int) (uin
 		return 0, false, err
 	}
 	return task.ID, true, nil
+}
+
+// Backfill writes back every accepted block still ahead, for a user who just turned
+// write-back on.
+func (s *Service) Backfill(userID uint) error {
+	if s.Calendar == nil {
+		return nil
+	}
+	var ids []uint
+	if err := s.DB.Model(&store.ScheduledSession{}).Where("user_id = ? AND status = ? AND starts_at > ? AND external_event_id = ''",
+		userID, store.BlockAccepted, s.Now()).Order("starts_at").Pluck("id", &ids).Error; err != nil {
+		return err
+	}
+	for _, id := range ids {
+		s.Calendar.Upsert(userID, id)
+	}
+	return nil
 }

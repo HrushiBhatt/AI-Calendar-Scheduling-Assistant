@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/anthropics/anthropic-sdk-go"
@@ -47,7 +48,7 @@ func (Stub) New(_ context.Context, body anthropic.MessageNewParams, _ ...option.
 	if m := stubCount.FindStringSubmatch(text); m != nil {
 		n, ok := stubWords[strings.ToLower(m[1])]
 		if !ok {
-			fmt.Sscanf(m[1], "%d", &n)
+			n, _ = strconv.Atoi(m[1]) // the pattern only lets digits through here
 		}
 		args["total_blocks"] = n
 	}

@@ -218,6 +218,13 @@ func (f *Fake) DeleteEvent(_ context.Context, _ *Credentials, calID, eventID str
 	return nil
 }
 
+// DropCalendar deletes a calendar we wrote to, as a user deleting it in Google would.
+func (f *Fake) DropCalendar(calID string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.written, calID)
+}
+
 // Written returns the events written back to calendar calID, sorted by start.
 func (f *Fake) Written(calID string) []Event {
 	f.mu.Lock()

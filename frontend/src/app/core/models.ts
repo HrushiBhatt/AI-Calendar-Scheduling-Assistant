@@ -257,3 +257,22 @@ export interface Starting {
   focus_min: number;
   mode: string;
 }
+
+/** A count out of a total; rate is null until there is a total. */
+export interface Rate {
+  count: number;
+  of: number;
+  rate: number | null;
+}
+
+/** GET /api/insights: how planning is going, from the user's own rows. */
+export interface Insights {
+  acceptance: Rate;
+  partial_accept: Rate;
+  completion: { planned: Rate; ad_hoc: Rate };
+  estimate_accuracy: { within_one: Rate; mean_actual_over_estimate: number | null };
+  tool_call_validity: Rate;
+  assistant: { turns: number; degraded: number; failures: Record<string, number> };
+  conflicts: Rate;
+  scheduler_latency: { p50_us: number; p99_us: number; samples: number };
+}

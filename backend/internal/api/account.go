@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -66,6 +67,12 @@ func (h *handler) login(c *gin.Context) {
 	if !bind(c, &in) {
 		return
 	}
+	// Per account as well as per address, so spreading guesses over many IPs doesn't help.
+	if allowed, wait := h.loginAccount.allow("login:" + strings.ToLower(strings.TrimSpace(in.Email))); !allowed {
+		c.Header("Retry-After", strconv.Itoa(int(wait.Seconds())+1))
+		c.JSON(http.StatusTooManyRequests, gin.H{"error": "too many sign-in attempts for this account; try again in a few minutes"})
+		return
+	}
 	var user store.User
 	err := h.DB.Where("email = ?", strings.ToLower(strings.TrimSpace(in.Email))).Limit(1).Find(&user).Error
 	if !ok(c, err) {
@@ -105,8 +112,17 @@ func (h *handler) saveSettings(c *gin.Context) {
 		return
 	}
 	uid := auth.UserID(c)
+	var before store.User
+	if !found(c, h.DB.First(&before, uid).Error) {
+		return
+	}
 	if !ok(c, h.DB.Model(&store.User{ID: uid}).Select("settings").Updates(store.User{Settings: settings}).Error) {
 		return
+	}
+	if settings.WriteBack && !before.Settings.WriteBack && h.Plans != nil {
+		if err := h.Plans.Backfill(uid); err != nil {
+			_ = c.Error(err) // the settings are saved; the backfill is best effort
+		}
 	}
 	h.changed(uid, "settings")
 	c.JSON(http.StatusOK, settings)

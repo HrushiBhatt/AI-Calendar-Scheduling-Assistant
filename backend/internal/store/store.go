@@ -280,6 +280,9 @@ type ScheduledSession struct {
 	Explain   string    `json:"explain" gorm:"size:300"`              // why the scheduler chose this slot
 	Score     float64   `json:"score"`
 	Note      string    `json:"note" gorm:"size:160"` // why it was skipped, conflicted or moved
+	// ConflictedAt is when a calendar change first overlapped the block. Conflicted is a
+	// passing status; this stays, for the conflict rate.
+	ConflictedAt *time.Time `json:"-"`
 	// Write-back: the Google event we created for it, and on which account.
 	CalendarAccountID *uint     `json:"-"`
 	ExternalEventID   string    `json:"-" gorm:"size:254"`

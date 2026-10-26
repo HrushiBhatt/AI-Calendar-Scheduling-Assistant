@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -121,6 +122,9 @@ func (c *client) call(method, path string, body, out any) int {
 	}
 	req, _ := http.NewRequest(method, c.base+path, r)
 	req.Header.Set("Content-Type", "application/json")
+	if method != "GET" {
+		req.Header.Set(auth.CSRFHeader, c.csrf()) // what Angular's HttpClient does
+	}
 	res, err := c.http.Do(req)
 	if err != nil {
 		c.t.Fatal(err)
@@ -130,6 +134,28 @@ func (c *client) call(method, path string, body, out any) int {
 		_ = json.NewDecoder(res.Body).Decode(out)
 	}
 	return res.StatusCode
+}
+
+// csrf returns the browser's XSRF-TOKEN cookie, fetching a page first if it has none.
+func (c *client) csrf() string {
+	u, _ := url.Parse(c.base)
+	find := func() string {
+		for _, ck := range c.http.Jar.Cookies(u) {
+			if ck.Name == auth.CSRFCookie {
+				return ck.Value
+			}
+		}
+		return ""
+	}
+	if token := find(); token != "" {
+		return token
+	}
+	res, err := c.http.Get(c.base + "/api/health")
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	res.Body.Close()
+	return find()
 }
 
 // ---- accounts ---------------------------------------------------------------------

@@ -77,7 +77,8 @@ func seedWork(db *gorm.DB, userID uint, now time.Time, loc *time.Location) error
 	if err := db.Create(&tasks).Error; err != nil {
 		return err
 	}
-	rng := rand.New(rand.NewPCG(7, 11)) // fixed seed: the same demo every time
+	rng := rand.New(rand.NewPCG(7, 11)) // #nosec G404 -- a fixed seed so the demo is the same every time; nothing secret
+
 	var sessions []store.Session
 	for d := -30; d < 0; d++ {
 		date := now.In(loc).AddDate(0, 0, d)

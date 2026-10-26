@@ -19,6 +19,8 @@ frontend/dist/
 frontend/.angular/
 frontend/coverage/
 frontend/out-tsc/
+frontend/test-results/
+frontend/playwright-report/
 backend/bin/
 
 # ---- editor & OS noise -------------------------------------------------------------

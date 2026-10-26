@@ -45,6 +45,9 @@ type handler struct {
 	syncLimit *limiter // POST /api/calendar/sync: once a minute per user
 	planLimit *limiter // POST /api/assistant/plan, per user
 	planIP    *limiter // and per address
+	// Sign-in and sign-up: per address, and per account being guessed at.
+	authIP       *limiter
+	loginAccount *limiter
 }
 
 // NewRouter wires every /api route. When staticDir is set it also serves the built
@@ -54,11 +57,18 @@ func NewRouter(d Deps, staticDir string) *gin.Engine {
 	r.Use(gin.Logger(), gin.Recovery())
 	_ = r.SetTrustedProxies(nil)
 
-	h := &handler{Deps: d, syncLimit: newLimiter(1, time.Minute), planLimit: newLimiter(20, time.Minute), planIP: newLimiter(60, time.Minute)}
-	api := r.Group("/api")
+	h := &handler{Deps: d, syncLimit: newLimiter(1, time.Minute), planLimit: newLimiter(20, time.Minute), planIP: newLimiter(60, time.Minute),
+		authIP: newLimiter(20, time.Minute), loginAccount: newLimiter(10, 10*time.Minute)}
+
+	// Google's push webhook has no session and no CSRF token: it is verified by channel ID
+	// and token instead. It is registered outside the /api group's middleware, so neither
+	// CSRF nor any future global rate limit can throttle Google's notifications.
+	r.POST("/api/calendar/push", h.calendarPush)
+
+	api := r.Group("/api", d.Auth.CSRF())
 	api.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"ok": true}) })
-	api.POST("/auth/register", h.register)
-	api.POST("/auth/login", h.login)
+	api.POST("/auth/register", perIP(h.authIP, "auth"), h.register)
+	api.POST("/auth/login", perIP(h.authIP, "auth"), h.login)
 	api.POST("/auth/logout", h.logout)
 
 	my := api.Group("", d.Auth.Required())
@@ -82,9 +92,8 @@ func NewRouter(d Deps, staticDir string) *gin.Engine {
 	my.PATCH("/sessions/:id", h.reflect)
 	my.DELETE("/sessions", h.clearSessions)
 	my.GET("/stats", h.stats)
+	my.GET("/insights", h.insights)
 
-	// Google's push webhook has no session: it is verified by channel ID and token instead.
-	api.POST("/calendar/push", h.calendarPush)
 	my.GET("/calendar/connect", h.calendarConnect)
 	my.GET("/calendar/callback", h.calendarCallback)
 	my.GET("/calendar/accounts", h.calendarAccounts)

@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import {
   CalendarAccounts,
   FocusRequest,
+  Insights,
   PlanRequest,
   PlanResponse,
   PlanView,
@@ -59,6 +60,7 @@ export class Api {
   reflect = (id: number, reflection: string) => this.send<Session>('PATCH', `/api/sessions/${id}`, { reflection });
   clearSessions = () => this.send<void>('DELETE', '/api/sessions');
   stats = () => this.get<Stats>(`/api/stats?today=${localDay()}`);
+  insights = () => this.get<Insights>('/api/insights');
 
   // calendars
   calendarAccounts = () => this.get<CalendarAccounts>('/api/calendar/accounts');

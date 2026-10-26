@@ -59,7 +59,11 @@ func (s *Service) Reconcile(ctx context.Context, userID uint) error {
 				}
 				note := truncate(fmt.Sprintf("%s (%s–%s) now overlaps this block", title,
 					m.StartsAt.In(loc).Format("15:04"), m.EndsAt.In(loc).Format("15:04")), 160)
-				if err := tx.Model(&b).Updates(map[string]any{"status": store.BlockConflicted, "note": note}).Error; err != nil {
+				updates := map[string]any{"status": store.BlockConflicted, "note": note}
+				if b.ConflictedAt == nil {
+					updates["conflicted_at"] = now.UTC()
+				}
+				if err := tx.Model(&b).Updates(updates).Error; err != nil {
 					return err
 				}
 				newly = append(newly, b)

@@ -155,7 +155,7 @@ interface Drag {
   imports: [BlockChip],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="timeline" role="group" [attr.aria-label]="'Schedule for ' + dayLabel()">
+    <div class="timeline" role="group" [attr.aria-label]="'Schedule for ' + dayLabel()" [attr.data-day]="day()">
       @if (layout().allDay.length) {
         <ul class="all-day" aria-label="All-day events">
           @for (e of layout().allDay; track e.id) {
