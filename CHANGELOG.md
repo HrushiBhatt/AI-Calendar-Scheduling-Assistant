@@ -2,11 +2,28 @@
 
 Newest first. The git history has the full detail.
 
+## 2026-11-04: browser only, with no sign-in
+
+**Removed**
+- Sign-in, including Google, along with accounts and the password rules.
+- The Go server, Docker image and sample data. GitHub Pages can't run a server, and one without sign-in would show every visitor the same data. The last version with the server is commit `b2e0356`.
+
+**Changed**
+- Everything is saved in the browser, and a first visit starts empty.
+- The timer saves its deadline, so it survives reloads and closed tabs.
+- The live site address follows the repo's new name: `/BrewFocus/`.
+- The security policy now lives in the page, because GitHub Pages can't send headers.
+- The README is now about design choices, with animated diagrams and measured charts.
+
+**Fixed**
+- The live site failed to load after the repo rename, and the deploy that would have fixed it was blocked by a browser test that depended on timing. That test is rewritten, and the suite was run under heavy CPU load.
+
+**The trade-off:** data stays on one device and browser, with no sync between them.
+
 ## 2026-11-04: back to a simple timer and tracker
 
 **Removed**
-- Google Calendar, the Claude assistant, the scheduler and the planning screens, to keep the app focused on timers and tracking.
-- The calendar, home and plan pages, task due dates and priorities, and the planning settings.
+- Google Calendar, the Claude assistant, the scheduler and the planning screens.
 - `AGENTS.md`, `ARCHITECTURE.md` and the diagrams that described the old design.
 
 **Restored**
@@ -16,11 +33,6 @@ Newest first. The git history has the full detail.
 - Every page now spans the full width of the screen.
 - Light and dark mode stay, with dark as the default and one button to switch.
 - The code is organized into folders by feature, with comments on how it works.
-
-**Kept**
-- Password and Google sign-in, session and CSRF protection, rate limits, security scans, and the live demo.
-
-**Upgrading:** existing tasks and sessions carry over. Tables left from the removed features stay in an old database, unused.
 
 ## Earlier
 

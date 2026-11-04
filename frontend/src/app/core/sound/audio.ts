@@ -4,7 +4,7 @@
  * that loop seamlessly; baking the random events (crackles, clinks, notes) into the
  * buffer keeps them playing in a background tab, where JS timers get throttled.
  */
-import { TickStyle } from '../api/models';
+import { TickStyle } from '../data/models';
 
 let ctx: AudioContext | undefined;
 const supported = typeof AudioContext !== 'undefined';

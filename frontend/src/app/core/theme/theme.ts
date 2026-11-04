@@ -8,7 +8,7 @@ const COLORS: Record<ThemeName, string> = { light: '#f7f1e8', dark: '#000000' };
 
 /**
  * Light or dark, dark by default. It's a preference of the device, like the ambience volumes,
- * so it's kept in localStorage rather than on the account. public/theme-init.js applies the
+ * so it's kept separately from the app's data. public/theme-init.js applies the
  * same choice before the first paint, so keep the storage key and colors in step with it.
  */
 @Injectable({ providedIn: 'root' })

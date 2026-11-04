@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, resource } from '@angular/core';
-import { Api } from '../../core/api/api';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { Store } from '../../core/data/store';
 import { Brew } from '../../core/state/brew';
 import { MinutesPipe, PluralPipe } from '../../shared/pipes';
 import { CafeShelf } from './cafe-shelf';
@@ -15,22 +15,18 @@ import { Heatmap } from './heatmap';
   styleUrl: './progress-page.css',
 })
 export class ProgressPage {
-  private readonly api = inject(Api);
+  private readonly store = inject(Store);
   protected readonly brew = inject(Brew);
   protected readonly stats = this.brew.stats;
 
-  /** Reloads whenever stats change, i.e. whenever a session lands on any device. */
-  protected readonly journal = resource({
-    params: () => this.stats(),
-    loader: () => this.api.sessions(),
+  /** Read again whenever the stats change, which is whenever a session lands in any tab. */
+  protected readonly journal = computed(() => {
+    this.stats();
+    return this.store.sessions();
   });
 
   /** Task names by ID, so a journal entry can say what it was for. */
   private readonly taskTitles = computed(() => new Map(this.brew.tasks().map((t) => [t.id, t.title])));
-
-  constructor() {
-    void this.brew.refresh('sessions');
-  }
 
   protected taskTitle(id: number | null): string | undefined {
     return id === null ? undefined : this.taskTitles().get(id);

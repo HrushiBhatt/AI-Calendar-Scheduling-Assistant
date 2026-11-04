@@ -63,39 +63,6 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
-            },
-            "pages": {
-              "budgets": [
-                {
-                  "type": "initial",
-                  "maximumWarning": "500kB",
-                  "maximumError": "1MB"
-                },
-                {
-                  "type": "anyComponentStyle",
-                  "maximumWarning": "8kB",
-                  "maximumError": "16kB"
-                }
-              ],
-              "outputHashing": "all",
-              "optimization": {
-                "scripts": true,
-                "styles": {
-                  "minify": true,
-                  "inlineCritical": false
-                },
-                "fonts": false
-              },
-              "index": {
-                "input": "src/index.pages.html",
-                "output": "index.html"
-              },
-              "fileReplacements": [
-                {
-                  "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.pages.ts"
-                }
-              ]
             }
           },
           "defaultConfiguration": "production"
@@ -108,15 +75,9 @@
             },
             "development": {
               "buildTarget": "brew-focus:build:development"
-            },
-            "pages": {
-              "buildTarget": "brew-focus:build:pages"
             }
           },
-          "defaultConfiguration": "development",
-          "options": {
-            "proxyConfig": "proxy.conf.json"
-          }
+          "defaultConfiguration": "development"
         },
         "test": {
           "builder": "@angular/build:unit-test"

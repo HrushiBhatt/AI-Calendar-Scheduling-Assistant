@@ -7,8 +7,7 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "e2e": "ng build && playwright test",
-    "e2e:pages": "playwright test --config playwright.pages.config.ts"
+    "e2e": "playwright test"
   },
   "private": true,
   "packageManager": "npm@11.19.0",

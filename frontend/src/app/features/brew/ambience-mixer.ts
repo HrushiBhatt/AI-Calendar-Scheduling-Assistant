@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Ambience } from '../../core/sound/ambience';
 import { tick } from '../../core/sound/audio';
 import { Brew } from '../../core/state/brew';
-import { TickStyle } from '../../core/api/models';
+import { TickStyle } from '../../core/data/models';
 
 const LAYERS = [
   { id: 'rain', label: 'Rain', icon: '🌧️' },
@@ -44,7 +44,7 @@ export class AmbienceMixer {
   }
 
   protected chooseTick(style: TickStyle): void {
-    void this.brew.updateSettings({ tick: style }); // saved to the account, so it follows you
+    void this.brew.updateSettings({ tick: style });
     if (style !== 'off') tick(style, 1, false); // preview
   }
 }

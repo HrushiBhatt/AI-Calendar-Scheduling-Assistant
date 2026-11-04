@@ -62,45 +62,10 @@
   background: var(--accent-soft);
 }
 
-.account {
+.tools {
   display: flex;
   align-items: center;
   gap: 14px;
-}
-
-.live {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-pixel);
-  font-size: 0.45rem;
-  color: var(--text-4);
-}
-
-.live::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  background: var(--line-2);
-}
-
-.live.on {
-  color: var(--break);
-}
-
-.live.on::before {
-  background: var(--break);
-  box-shadow: 0 0 8px var(--break);
-  animation: blink-soft 2s steps(1) infinite;
-}
-
-.user {
-  max-width: 140px;
-  overflow: hidden;
-  font-size: 0.85rem;
-  color: var(--text-2);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .head-btn {
@@ -109,35 +74,13 @@
   background: var(--surface);
 }
 
-.demo-banner {
-  margin: 0 3px 22px;
-  padding: 8px 12px;
-  font-size: 0.8rem;
-  text-align: center;
-  color: var(--text-2);
-  background: var(--surface);
-}
-
-.demo-banner a {
-  color: var(--accent);
-}
-
 .settings-btn:hover {
   transform: rotate(45deg);
-}
-
-@keyframes blink-soft {
-  50% {
-    opacity: 0.4;
-  }
 }
 
 @media (max-width: 640px) {
   .logo-text {
     font-size: 0.8rem;
-  }
-  .user {
-    display: none;
   }
   .tabs {
     order: 3;

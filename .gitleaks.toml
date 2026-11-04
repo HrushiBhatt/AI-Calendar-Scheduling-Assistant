@@ -4,7 +4,8 @@ title = "Brew Focus"
 [extend]
 useDefault = true
 
-# Test fixtures only. Nothing here protects real data: each value is made up for a test.
+# Test fixtures from older commits, which this still scans. Nothing here protects real data:
+# each value was made up for a test.
 [[allowlists]]
 description = "Throwaway keys in tests, and the empty template"
 paths = [

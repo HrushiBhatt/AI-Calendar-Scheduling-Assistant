@@ -1,32 +1,22 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
-import { Api } from '../api/api';
-import { FocusRequest, TimerAction, TimerState } from '../api/models';
-
-const IDLE: TimerState = {
-  phase: 'focus',
-  status: 'idle',
-  duration_ms: 0,
-  remaining_ms: 0,
-  server_time: new Date(0).toISOString(),
-};
+import { Store } from '../data/store';
+import { FocusRequest, TimerAction, TimerState } from '../data/models';
 
 /**
- * The client's view of the server-run timer. The server owns the clock; this only
- * renders it, deriving the remaining time from the server's deadline (corrected for
- * clock skew), so every device shows the same countdown.
+ * The timer as the screen shows it. The store owns the state; this only works out the time left
+ * from the saved deadline, so a reload or a throttled background tab can't make it drift.
  */
 @Injectable({ providedIn: 'root' })
 export class Timer {
-  private readonly api = inject(Api);
+  private readonly store = inject(Store);
   private readonly now = signal(Date.now());
-  private skewMs = 0; // server clock minus ours
 
-  readonly state = signal<TimerState>(IDLE);
+  readonly state = signal<TimerState>(this.store.timer());
 
   readonly remainingMs = computed(() => {
     const s = this.state();
     if (s.status !== 'running' || !s.ends_at) return s.remaining_ms;
-    return Math.max(0, Date.parse(s.ends_at) - (this.now() + this.skewMs));
+    return Math.max(0, Date.parse(s.ends_at) - this.now());
   });
 
   constructor() {
@@ -38,29 +28,22 @@ export class Timer {
     });
   }
 
-  /** Adopt a state from the server, ignoring any that arrive out of order. */
+  /** Show a new state, from this tab or another one. */
   apply(next: TimerState): void {
-    const at = Date.parse(next.server_time);
-    if (at < Date.parse(this.state().server_time)) return;
-    this.skewMs = at - Date.now();
     this.now.set(Date.now());
     this.state.set(next);
   }
 
-  reset(): void {
-    this.state.set(IDLE);
+  startFocus(req: FocusRequest): void {
+    this.apply(this.store.startFocus(req));
   }
 
-  async startFocus(req: FocusRequest): Promise<void> {
-    this.apply(await this.api.startFocus(req));
+  startBreak(seconds: number): void {
+    this.apply(this.store.startBreak(seconds));
   }
 
-  async startBreak(seconds: number): Promise<void> {
-    this.apply(await this.api.startBreak(seconds));
-  }
-
-  async control(action: TimerAction): Promise<void> {
-    const state = await this.api.control(action);
+  control(action: TimerAction): void {
+    const state = this.store.control(action);
     if (action !== 'distraction') this.apply(state);
   }
 }

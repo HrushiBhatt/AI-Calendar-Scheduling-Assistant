@@ -1,35 +1,40 @@
 import { defineConfig } from '@playwright/test';
 
 /**
- * End-to-end tests of the app against the real Go server. Run with `npm run e2e`, which
- * builds the app first.
+ * Tests the site exactly as GitHub Pages serves it: static files under the repo's path. Deploys
+ * wait on this, so a broken build can't replace the live site.
+ *
+ *   make e2e
+ *
+ * PAGES_URL points the same tests at the real site instead.
  */
-const PORT = 5077;
+const PORT = 5078;
+const live = process.env['PAGES_URL'];
+const base = process.env['PAGES_BASE'] ?? '/BrewFocus/';
+const ci = !!process.env['CI'];
 
 export default defineConfig({
   testDir: './e2e',
   timeout: 60_000,
   fullyParallel: false,
-  reporter: process.env['CI'] ? 'github' : 'list',
+  // CI machines are slower and busier. One retry stops a hiccup from holding up a deploy; a test
+  // that needed it is still reported as flaky.
+  retries: ci ? 1 : 0,
+  reporter: ci ? 'github' : 'list',
   use: {
-    baseURL: `http://127.0.0.1:${PORT}`,
+    baseURL: live ?? `http://127.0.0.1:${PORT}${base}`,
     timezoneId: 'America/New_York',
     locale: 'en-US',
     // Locally, drive the Chrome that's already installed; CI installs Playwright's Chromium.
-    channel: process.env['CI'] ? undefined : 'chrome',
+    channel: ci ? undefined : 'chrome',
     trace: 'retain-on-failure',
   },
-  webServer: {
-    command: 'go run ./cmd/server -static ../frontend/dist/brew-focus/browser',
-    cwd: '../backend',
-    url: `http://127.0.0.1:${PORT}/api/health`,
-    timeout: 120_000,
-    reuseExistingServer: false,
-    env: {
-      ADDR: `127.0.0.1:${PORT}`,
-      DB_PATH: ':memory:',
-      GIN_MODE: 'release',
-      JWT_SECRET: 'e2e-secret-e2e-secret-e2e-secret',
-    },
-  },
+  webServer: live
+    ? undefined
+    : {
+        command: 'node e2e/serve.mjs',
+        url: `http://127.0.0.1:${PORT}/health`,
+        reuseExistingServer: false,
+        env: { PAGES_PORT: String(PORT), PAGES_BASE: base },
+      },
 });

@@ -1,121 +1,100 @@
-# ☕ Brew Focus
+<p align="center"><img src="docs/assets/hero.svg" alt="Brew Focus: a pixel-art mug drains as the timer counts down, then refills on a break" width="100%"/></p>
 
-A pomodoro timer and productivity tracker, with a pixel-art mug that drains as you work. Timers run on the server, so a session keeps going when you close the tab and stays in sync across every device you're signed in on.
+<p align="center"><b><a href="https://hrushibhatt.github.io/BrewFocus/">Open the app</a></b></p>
 
-**[Try the live demo](https://hrushibhatt.github.io/AI-Calendar-Scheduling-Assistant/)**: it runs entirely in your browser with sample data, so there's no sign-in.
+![A focus block from start to finish: pick a task, set an intention, the mug drains, write a reflection, the mug refills on the break, and the session appears on the Progress page](docs/assets/demo.gif)
 
-![The Brew page: tasks on the left, the pixel-art mug timer in the middle, timing modes and ambience on the right](docs/assets/screen-brew.png)
+<img src="docs/assets/stats.svg" alt="Zero servers, accounts, cookies and outside requests, and 42 tests" width="100%"/>
 
-![The Progress page: totals and streaks, a year heatmap, a café that fills as you finish brews, and a journal of past sessions](docs/assets/screen-progress.png)
+## Everything runs in the browser
 
-<table>
-  <tr>
-    <td width="50%"><img src="docs/assets/screen-login.png" alt="The sign-in page: the mug and name on the left, the log in and sign up form on the right"/></td>
-    <td width="50%"><img src="docs/assets/screen-light.png" alt="The Brew page in light mode"/></td>
-  </tr>
-</table>
+<img src="docs/assets/architecture.svg" alt="GitHub Pages delivers static files once. In the browser, screens talk to the Brew service, which talks to the Store, which saves to localStorage. Other tabs follow over a BroadcastChannel, and a Web Lock lets one tab finish each block. There is no server, account or tracking." width="100%"/>
 
-## Features
-
-| | |
+| Choice | Why |
 |---|---|
-| **Timers** | Pomodoro 25/5, 52/17, Animedoro 50/10, Deep Work 90/20, or your own |
-| **Focus flow** | Set an intention, breathe, focus, write a one-line reflection, take a break |
-| **Tasks** | Estimate tasks in focus blocks and track the time spent on each |
-| **Progress** | Today's totals, streaks, a year heatmap, a journal, and a pixel café that fills as you finish brews |
-| **Live sync** | Start on your laptop and pause on your phone. Every open tab follows along |
-| **Ambience** | Mix rain, café, fireplace and lo-fi layers, or play your own audio file |
-| **Strict mode** | Tab switches during focus are logged as distractions |
-| **Light and dark** | Dark by default, one click to switch, and it remembers your choice |
-| **Accounts** | Email and password, or sign in with Google |
+| No server | GitHub Pages only serves static files, and a server without sign-in would show every visitor the same data |
+| No accounts | Data on your own device needs no password to protect it |
+| One JSON document in `localStorage` | Reads are instant, so screens have no loading states |
+| `BroadcastChannel` between tabs | Pausing in one tab pauses them all |
+| Web Lock on the deadline | Every tab sets an alarm, and exactly one logs the block |
 
-## Quick start
+**The trade-off:** your data stays on one device and browser, with no sync between them.
 
-You need Go 1.27+ and Node 24.15+.
+## A deadline, not a counter
 
-```bash
-make install   # download dependencies
-make api       # terminal 1: the Go API on :5001
-make web       # terminal 2: the app on http://localhost:4200
-```
+<img src="docs/assets/timer.svg" alt="Illustration: a counter falls behind when a tab is in the background or closed, while a saved deadline stays right" width="100%"/>
 
-Use `make demo` in place of `make api` for a seeded account: `demo@brewfocus.dev` / `brewfocus`.
+Browsers throttle timers in background tabs, and a closed tab runs nothing, so a counter loses time. The app saves when a block ends and works out the rest. A block that ran out while the tab was closed is credited on your return.
 
-Settings go in `.env`: copy [`.env.example`](.env.example). Nothing is needed for local use. In production, set `JWT_SECRET` and `SECURE_COOKIES=true`.
+## One flow for every block
 
-## Commands
+<img src="docs/assets/flow.svg" alt="The cycle: intention, optional breathing, focus while the mug drains, a one-line reflection, then a break while it refills" width="100%"/>
 
-| Command | What it does |
+An intention gives a block a purpose, and a reflection makes it count for more than minutes. One service, `Brew`, runs the whole cycle with Angular signals, so every screen shows the same state.
+
+## Secure by having less
+
+<img src="docs/assets/security.svg" alt="A strict page policy lets in only this site's own files, and blocks injected scripts, outside scripts and data leaving. With no server or accounts, there's nothing to break into." width="100%"/>
+
+| Choice | Why |
 |---|---|
-| `make api` / `make web` | Run the API and the app for development |
-| `make demo` | Run the API with a seeded demo account |
-| `make serve` | Build everything and serve it from one Go process on :5001 |
-| `make test` | Go tests under the race detector, then Angular unit tests |
-| `make e2e` | Browser tests against the real Go server |
-| `make audit` | Vulnerability, code and secret scans |
-| `make docker` | Build and run the production image |
-| `make pages` | Run the browser-only demo on :4200 |
-| `make pages-build` | Build the site CI publishes, then test it with `cd frontend && npm run e2e:pages` |
+| Policy in a `<meta>` tag | Pages can't send security headers |
+| Fonts and code self-hosted | The policy can then refuse every other host |
+| Theme script in its own file | The policy allows no inline scripts |
+| Everything typed is shown as text | A task named `<img onerror=…>` can't run |
+| The store checks and repairs what it reads | A damaged save can't break the page |
 
-## How the code is organized
+Browser tests check all of this against the built site.
+
+## Pixel art, drawn in code
+
+<img src="docs/assets/screen-brew.png" alt="The Brew page: tasks on the left, the mug timer in the middle, modes and ambience on the right" width="100%"/>
+
+<img src="docs/assets/screen-progress.png" alt="The Progress page: totals and streaks, a year heatmap, a café that fills as you finish brews, and a journal" width="100%"/>
+
+| Choice | Why |
+|---|---|
+| Mug and sprites drawn as SVG squares | Crisp at any size, with no image files to download |
+| Ambience synthesized with Web Audio | Rain and lo-fi with no audio files |
+| Color tokens for both themes | Light mode changes only tokens; the mug keeps its colors |
+| Full-width grid with flexible columns | Uses the whole screen, then stacks on a phone |
+
+<img src="docs/assets/screen-light.png" alt="The Brew page in light mode" width="100%"/>
+
+## Small on purpose
+
+<img src="docs/assets/chart-code.svg" alt="Lines of code: about 27,800 with calendar and Claude, about 11,300 with a Go server, and about 5,000 now" width="100%"/>
+
+<img src="docs/assets/chart-size.svg" alt="What a visitor downloads, compressed: about 98 kB on first load, at most 81 kB of fonts, 7.7 kB for the Brew page and 3.9 kB for the Progress page when opened" width="100%"/>
+
+Each page loads when it's opened, so the timer never downloads the heatmap.
+
+## Every push deploys
+
+<img src="docs/assets/deploy.svg" alt="Every push to main: scan, unit tests, build, browser tests, then publish to GitHub Pages" width="100%"/>
+
+A failure at any step leaves the live site as it was. The build takes its path from the repo's name, so a rename is fixed by the next push.
+
+## The code
 
 ```
-backend/
-  cmd/server/            startup and configuration
-  internal/
-    api/                 HTTP routes, one file per resource
-      middleware/        security headers, size limits, rate limits
-    auth/                passwords, sessions, Google sign-in, CSRF
-    engine/              server-run timers: one goroutine per running timer
-    events/              live updates to every open tab
-    store/               database models and SQLite setup
-    demo/                the sample account
-
 frontend/src/app/
   core/
-    api/                 API client, data shapes, live event stream
-    auth/                the signed-in user and route guards
-    state/               the Brew service (app state), timer, helpers
-    sound/               synthesized ambience and chimes
-    theme/               light and dark
-    demo/                the browser-only backend for the live demo
-  features/
-    brew/                the timer page: mug, modes, ambience
-    tasks/               the task list
-    progress/            stats, heatmap, café, journal
-    focus-flow/          intention, breathing and reflection dialogs
-    settings/            settings and account security
-    login/               the sign-in page
-  shared/                dialog frame, pipes, Google logo
-    pixel-art/           the mug and sprites
-
-frontend/e2e/            browser tests against the Go server
-frontend/e2e-pages/      browser tests against the static demo
+    data/       the store: rules, saving, the timer's deadline, events
+    state/      Brew (the focus flow), the timer display, helpers
+    sound/      synthesized ambience and chimes
+    theme/      light and dark
+  features/     brew, tasks, progress, focus-flow, settings
+  shared/       dialog frame, pipes, pixel art
+frontend/e2e/   browser tests, against the site as Pages serves it
+docs/assets/    generate.py draws these diagrams
 ```
 
-**How a timer works.** The server owns the clock. Each running timer is a goroutine that holds its own state and takes commands (pause, resume, finish) over a channel, so it needs no locks. It writes to SQLite as it goes, so a restart resumes it, and it publishes each change to every open tab over Server-Sent Events. The browser only displays what the server says.
+```bash
+make install
+make web    # http://localhost:4200
+make test   # unit tests
+make e2e    # browser tests
+```
 
-**The stack.** Go, Gin, GORM and SQLite on the server. Angular with signals on the client. One process serves both.
-
-## Security
-
-- Passwords are hashed with bcrypt and checked for strength. Google accounts are matched on Google's permanent ID, never on email.
-- Sessions are signed cookies backed by a database row, so signing out takes effect immediately.
-- Every query is scoped to the signed-in user, and state-changing requests need a CSRF token.
-- Sign-ins are rate limited per address and per account.
-- A strict Content-Security-Policy allows no outside scripts or inline scripts, and fonts are self-hosted.
-- CI runs vulnerability, code and secret scans, and pins every dependency.
-
-## Tests
-
-Measured on the last run: **64 backend tests** with 7 subtests, always under the race detector, **33 frontend unit tests**, and **14 browser tests**: 4 against the Go server and 10 against the static demo. `make audit` found no vulnerabilities in the code paths the app uses and no leaked secrets.
-
-The Docker image is built and scanned in CI. It hasn't been built on a local machine.
-
-## Deployment
-
-The live demo publishes to GitHub Pages on every push to `main`, once its browser tests pass. Pages only serves static files, so the demo runs an in-browser backend instead of the Go server, and it never asks for a password.
-
-The full app with accounts isn't hosted anywhere public yet. The `Dockerfile` builds a single image for any host that runs containers. Mount a volume at `/data` for the database.
-
-See [CHANGELOG.md](CHANGELOG.md) for what changed.
+[Changelog](CHANGELOG.md)

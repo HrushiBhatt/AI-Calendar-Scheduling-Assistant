@@ -374,37 +374,6 @@ kbd {
   box-shadow: 0 2px 0 var(--line-2);
 }
 
-/* Google's light button, to its branding guidelines: white fill, a 1px #747775 border, 12px
-   of padding and 10px after the logo. It stays off the pixel theme on purpose. */
-.gbtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 40px;
-  padding: 0 12px;
-  font-family: Roboto, Arial, sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
-  color: #1f1f1f;
-  text-decoration: none;
-  background: #fff;
-  border: 1px solid #747775;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.gbtn:hover:not(:disabled) {
-  background: #ececec;
-}
-
-.gbtn-block {
-  display: flex;
-  width: 100%;
-}
-
 /* ---- modal -------------------------------------------------------------- */
 
 .modal {

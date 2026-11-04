@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Brew } from '../../core/state/brew';
-import { Task } from '../../core/api/models';
+import { Task } from '../../core/data/models';
 import { ICONS } from '../../shared/pixel-art/sprites';
 import { MinutesPipe } from '../../shared/pipes';
 import { Sprite } from '../../shared/pixel-art/sprite';
@@ -26,10 +26,10 @@ export class TaskList {
   protected readonly open = computed(() => this.brew.tasks().filter((t) => !t.done));
   protected readonly done = computed(() => this.brew.tasks().filter((t) => t.done));
 
-  async add(): Promise<void> {
+  add(): void {
     const { title, estimate } = this.form.getRawValue();
     if (this.form.invalid || !title.trim()) return;
-    await this.brew.addTask(title.trim(), estimate);
+    this.brew.addTask(title.trim(), estimate);
     this.form.reset();
   }
 

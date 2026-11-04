@@ -1,4 +1,4 @@
-import { Mode, Preset } from '../api/models';
+import { Mode, Preset } from '../data/models';
 
 /** Built-in rhythms. The user's own come from the API as presets. */
 export const BUILTIN_MODES: Mode[] = [

@@ -11,7 +11,7 @@ const SEGMENTS = 24;
 
 /**
  * The timer itself: the mug, whose coffee drains as a block runs, the clock on it, the progress
- * bar and the controls. It only displays: the server runs the timer, through the Brew service.
+ * bar and the controls. It only displays; the Brew service and the store run the timer.
  */
 @Component({
   selector: 'app-timer-stage',
@@ -38,7 +38,7 @@ export class TimerStage {
     return this.status() === 'running' ? 'FOCUS!' : 'READY!';
   });
 
-  /** The running block's mode (possibly started on another device), else the selected one. */
+  /** The running block's mode (possibly started in another tab), else the selected one. */
   protected readonly modeLabel = computed(() => {
     const running = this.brew.timer.state().mode;
     const m = this.brew.mode();

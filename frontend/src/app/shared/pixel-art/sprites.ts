@@ -1,7 +1,7 @@
 /**
  * Pixel art as text: each string is a row, each character a pixel, '.' is
  * transparent. Icons use 'x' (drawn in currentColor); café items carry their
- * own palettes. Café ids match the unlock thresholds on the server.
+ * own palettes. Café ids and thresholds are read by the store when a block finishes.
  */
 
 export interface CafeItem {
