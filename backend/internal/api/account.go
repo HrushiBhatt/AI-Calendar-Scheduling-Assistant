@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/auth"
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/demo"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/store"
 )
 
@@ -128,9 +129,21 @@ func (h *handler) logout(c *gin.Context) {
 	}
 }
 
-// logoutAll ends the user's sessions on every device, including this one.
+// logoutAll ends the user's sessions on every device, including this one. On the shared
+// demo account it ends only this one, so a visitor can't sign everyone else out.
 func (h *handler) logoutAll(c *gin.Context) {
-	if !ok(c, h.Auth.RevokeSessions(auth.UserID(c), "")) {
+	uid := auth.UserID(c)
+	var user store.User
+	if !found(c, h.DB.First(&user, uid).Error) {
+		return
+	}
+	if user.Email == demo.Email {
+		if ok(c, h.Auth.SignOut(c)) {
+			c.Status(http.StatusNoContent)
+		}
+		return
+	}
+	if !ok(c, h.Auth.RevokeSessions(uid, "")) {
 		return
 	}
 	h.Auth.ClearCookie(c)
@@ -147,6 +160,11 @@ func (h *handler) changePassword(c *gin.Context) {
 	uid := auth.UserID(c)
 	var user store.User
 	if !found(c, h.DB.First(&user, uid).Error) {
+		return
+	}
+	if user.Email == demo.Email {
+		// Its password is public, so changing it would lock out every other visitor.
+		c.JSON(http.StatusForbidden, gin.H{"error": "the demo account's password can't be changed"})
 		return
 	}
 	if len(user.PasswordHash) > 0 && !auth.CheckPassword(user.PasswordHash, in.Current) {

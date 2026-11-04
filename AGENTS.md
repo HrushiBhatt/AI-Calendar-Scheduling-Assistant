@@ -90,7 +90,7 @@ A change that breaks one of these is wrong even if everything else works.
 | The Trivy action isn't used | Its installer depends on `get.trivy.dev`, which stopped resolving |
 | `dummyHash` work on failed logins | Equal timing hides which emails exist |
 | Sessions are a JWT *and* a database row | The signature rejects forgeries cheaply, and the row makes them revocable |
-| The demo password is in the source and logs | It's a public demo account with no real data |
+| The demo password is in the source and logs | It's a public demo account with no real data. Its password can't be changed, and it can't link Google or sign other visitors out, so one visitor can't lock out the rest |
 
 ## Working agreement
 

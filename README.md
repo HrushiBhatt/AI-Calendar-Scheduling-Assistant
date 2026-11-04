@@ -203,13 +203,13 @@ sequenceDiagram
 
 | Measure | Result |
 |---|---|
-| Backend tests | **133 tests and 424 subtests**, always under the race detector in CI |
+| Backend tests | **134 tests and 424 subtests**, always under the race detector in CI |
 | Frontend tests | **40 unit tests**, plus **2 full browser tests**, one of which checks the live security policy in the browser itself |
 | Scheduler | **17 golden fixtures**, including a daylight-saving day and a red-eye across midnight, plus a property test over **400 random calendars** in five time zones |
 | Scheduler speed | **About 82 µs** to plan a busy week (5 runs: 79 to 86 µs, Apple M2) |
 | Password hashing | **281 ms** per bcrypt hash at cost 12 (Apple M2) |
 
-<img src="docs/assets/chart-coverage.svg" alt="Backend test coverage by package: events 100%, planner 97.3%, engine 92.9%, auth 88.6%, api 85.3%, assistant 81.9%, scheduler 81.6%, store 78.4%, plans 76.4%, calendar 70.9%, cmd/server 14.9%, demo 0%. Overall 78.2%." width="100%"/>
+<img src="docs/assets/chart-coverage.svg" alt="Backend test coverage by package: events 100%, planner 97.3%, engine 92.9%, auth 88.6%, api 85.4%, assistant 81.9%, scheduler 81.6%, store 78.4%, plans 76.4%, calendar 70.9%, cmd/server 14.9%, demo 0%. Overall 78.2%." width="100%"/>
 
 <sub>The two low bars are startup wiring and demo seed data. The planner, engine and security code are what the suite is built around.</sub>
 

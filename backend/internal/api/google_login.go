@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/auth"
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/demo"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/store"
 )
 
@@ -28,7 +29,16 @@ func (h *handler) googleStart(c *gin.Context) {
 
 // googleLink starts the same flow for a signed-in user, to add Google to their account.
 func (h *handler) googleLink(c *gin.Context) {
-	h.startLogin(c, auth.UserID(c))
+	uid := auth.UserID(c)
+	var user store.User
+	if !found(c, h.DB.First(&user, uid).Error) {
+		return
+	}
+	if user.Email == demo.Email {
+		c.JSON(http.StatusForbidden, gin.H{"error": "the demo account can't be linked to Google"})
+		return
+	}
+	h.startLogin(c, uid)
 }
 
 func (h *handler) startLogin(c *gin.Context, linkTo uint) {

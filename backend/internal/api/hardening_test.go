@@ -15,6 +15,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/auth"
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/demo"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/store"
 )
 
@@ -118,6 +119,38 @@ func TestChangingAPassword(t *testing.T) {
 	if code := fresh.call("POST", "/api/auth/login", obj{"email": "ada@example.com", "password": newPassword}, nil); code != 200 {
 		t.Errorf("the new password: %d, want 200", code)
 	}
+}
+
+// The demo account's password is public, so one visitor must not be able to lock out or
+// sign out the others, or attach their own Google account to it.
+func TestVisitorsCantTakeOverTheDemoAccount(t *testing.T) {
+	g := setupGoogle(t)
+	hash, _ := auth.HashPassword(demo.Password)
+	g.db.Create(&store.User{Email: demo.Email, Name: "Demo", PasswordHash: hash, Settings: store.DefaultSettings})
+	signIn := func() *client {
+		c := g.browser(t)
+		if code := c.call("POST", "/api/auth/login", obj{"email": demo.Email, "password": demo.Password}, nil); code != 200 {
+			t.Fatalf("demo sign-in: %d", code)
+		}
+		return c
+	}
+	first, second := signIn(), signIn()
+	if code := first.call("PUT", "/api/me/password", obj{"current": demo.Password, "new": "plum lantern gravity orbit"}, nil); code != 403 {
+		t.Errorf("changing the password: %d, want 403", code)
+	}
+	if code, _ := visit(t, first, "/api/auth/google/link"); code != 403 {
+		t.Errorf("linking Google: %d, want 403", code)
+	}
+	if code := first.call("POST", "/api/auth/logout-all", nil, nil); code != 204 {
+		t.Errorf("sign out everywhere: %d, want 204", code)
+	}
+	if code := first.call("GET", "/api/me", nil, nil); code != 401 {
+		t.Errorf("the visitor's own session: %d, want it ended", code)
+	}
+	if code := second.call("GET", "/api/me", nil, nil); code != 200 {
+		t.Errorf("another visitor's session: %d, want it untouched", code)
+	}
+	signIn() // the public password still works
 }
 
 func TestGuessingTheCurrentPasswordIsSlowedDown(t *testing.T) {
