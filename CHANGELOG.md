@@ -2,6 +2,43 @@
 
 Every notable change to Brew Focus, and why it was made. Newest first. Dates are when the work landed; there are no version tags yet.
 
+## 2026-11-04: a home page, top navigation and liquid glass over a photograph
+
+- **Added: a home page.** A greeting and one door each to Calendar, Focus and Progress, with a single live detail on each. *Why:* the app needed a simple place to start, instead of dropping people straight into a calendar. The calendar moved to `/calendar`.
+- **Changed: the tabs are now a floating bar at the top, not a side rail.** It's centered and doesn't span the page, with a thumb that glides to the open tab. The logo goes home, and the theme and settings buttons sit to the right. *Why:* the owner asked for it, and it gives the content the full width.
+- **Changed: the Ask Claude bar sits under the tabs, on every screen but Focus.** *Why:* planning should be reachable from anywhere, while the timer stays free of distractions.
+- **Added: a plan screen that a command opens.** It shows the request while Claude works, then the plan on the calendar beside the decision. *Why:* a command should feel like it opened something, and a review deserves the whole screen. A plan still waiting shows a link on the calendar.
+- **Added: real transitions between screens.** Tabs slide in the direction you went, and a command unfolds its screen from the bar. *Why:* the owner asked for motion between screens, and direction helps people keep their place.
+- **Added: a 4K background photograph, with all content on liquid glass above it.** The image lives in `frontend/src/assets/background`. Large and high-density screens get the 3972 px original, phones and small windows get a 1920 px copy, and a tiny blurred copy shows at once on large screens. *Why:* the owner asked for a premium look.
+- **Changed: the palette is now cool neutrals with the crema accent.** *Why:* warm brown glass looked muddy over a blue sky, and crema is complementary to it. Both themes use the same photograph.
+- **Measured: text contrast against the photograph's real extremes.** The photo was downsampled to match the blur, and its darkest and brightest regions were each composited with the glass. Text stays at 4.5:1 or better in both themes.
+- **Changed: everything sits in one centered column, and the calendar's hours scroll inside their glass.** *Why:* a cleaner page, with the bars always in reach.
+- **Fixed: the plan screen could briefly say there was nothing to review.** *Why:* it waited for a refetch after the answer arrived. It now shows the plan from the answer itself.
+
+## 2026-11-04: light and dark mode
+
+- **Added: a light theme next to the dark one.** It follows the system by default. A button in the navigation switches directly, and Settings offers System, Light or Dark. *Why:* a dark calendar is hard to read in a bright room, and people have their own preference. On a phone the choice lives in Settings, because the tab bar has no room to spare.
+- **Added: the theme is set before the first paint.** `public/theme-init.js` runs ahead of the app. *Why:* otherwise a light page flashes dark on every load. It's a file because the Content-Security-Policy allows no inline scripts.
+- **Decided: the theme belongs to the device, not the account.** *Why:* a phone can follow its own setting while a laptop stays dark. It also means no server change, so the live demo works the same way.
+- **Added: switching spreads the new theme in a circle from the control you used.** *Why:* it makes a big visual change feel like one deliberate step. `prefers-reduced-motion` skips it.
+- **Changed: every color is now a token defined for both themes.** The mug keeps its own colors in either. Text on the app's surfaces was calculated at 4.5:1 contrast or better in both.
+- **Changed: the first Settings tab is now General.** *Why:* it holds Appearance as well as the timer options.
+
+## 2026-11-04: a redesign around the calendar
+
+- **Changed: the app now opens on a calendar with day, week and month views.** *Why:* it grew from a timer into a scheduler, so the home screen should start from your time. The timer moved to its own Focus page, and old `/plan` links still work.
+- **Added: blocks can be dragged across days, and open their details when clicked, with Start and Remove.** *Why:* a week view invites moving things between days, and the server already allowed both actions. It still re-checks every move.
+- **Changed: Claude is one bar docked over the calendar.** *Why:* asking should take one step, and the answer should land where the time is. The form is now an options panel behind it, and `/` jumps to the bar.
+- **Changed: much less wording.** *Why:* the interface explained itself in sentences it didn't need. A scheduler's reason now unfolds on hover or focus, and status shows in a block's styling instead of a label.
+- **Changed: Settings is a side panel with four short tabs.** *Why:* it was one long scrolling dialog with a hint under every option.
+- **Added: motion throughout, in CSS only.** Pages cross-fade, new ranges slide in from the direction you went, proposed blocks shimmer, a running session deepens the background and fades the panels beside it, and finishing throws a burst of beans. *Why:* to make the app feel alive without adding a dependency. `prefers-reduced-motion` turns all of it off.
+- **Changed: a new look, in espresso and crema.** The pixel font and borders are gone from the interface, and the pixel mug stays as the timer's centerpiece. *Why:* pixel text is hard to read in a dense calendar.
+- **Changed: the running timer follows you as a ring in the navigation.** *Why:* the timer is no longer on the home page.
+- **Changed: the schedule route now allows six weeks instead of 31 days.** *Why:* a month grid can show up to 42 days. A test covers a range across the autumn clock change, which runs an hour longer.
+- **Fixed: "Under a minute, not logged" never appeared.** *Why:* an event with no data reached the browser as the text `<nil>`, which isn't JSON, so the page threw and lost it. Found while walking through the redesign.
+- **Fixed: a failed request could break the calendar or Progress.** *Why:* they read the failed request's value directly, which throws. They now show an empty or error state.
+- **Changed: agents no longer push.** *Why:* the owner pushes when they're ready, as they asked.
+
 ## 2026-11-04: Google and Claude in the interface, and their first real runs
 
 - **Changed: Google sign-in and calendar connection now always show, with Google's logo.** *Why:* they used to disappear when the server had no keys, so a misplaced key file made them look like they didn't exist. Without keys they now show disabled and say what's missing. The buttons follow Google's branding rules, so they stay white instead of matching the pixel theme.

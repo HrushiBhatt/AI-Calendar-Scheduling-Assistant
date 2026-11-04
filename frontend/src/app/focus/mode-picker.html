@@ -1,0 +1,40 @@
+<section class="card" aria-labelledby="modes-title">
+  <h2 class="card-title" id="modes-title">Mode</h2>
+  <ul class="modes">
+    @for (m of brew.modes(); track m.key) {
+      <li class="mode-item">
+        <button class="mode" [attr.aria-pressed]="m.key === brew.mode().key" [disabled]="brew.busy()" (click)="brew.selectMode(m)" [title]="m.blurb">
+          <span class="time">{{ m.focus }}<small>/{{ m.rest }}</small></span>
+          <span class="name">{{ m.name }}</span>
+        </button>
+        @if (m.presetId !== undefined) {
+          <button class="icon-btn remove" [attr.aria-label]="'Delete ' + m.name" [disabled]="brew.busy()" (click)="brew.deleteMode(m)">
+            <app-icon name="close" style="--icon: 12px" />
+          </button>
+        }
+      </li>
+    }
+  </ul>
+
+  <details class="custom" #details>
+    <summary>Custom</summary>
+    <form class="custom-form" [formGroup]="form" (ngSubmit)="save(details)">
+      <label class="field wide">
+        Name
+        <input class="input" formControlName="name" maxlength="32" />
+      </label>
+      <label class="field">
+        Focus
+        <input class="input" type="number" formControlName="focus" min="1" max="180" />
+      </label>
+      <label class="field">
+        Break
+        <input class="input" type="number" formControlName="rest" min="0" max="60" />
+      </label>
+      @if (error()) {
+        <p class="form-error wide">{{ error() }}</p>
+      }
+      <button class="btn btn-sm wide">Save</button>
+    </form>
+  </details>
+</section>

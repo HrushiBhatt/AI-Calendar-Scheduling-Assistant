@@ -21,34 +21,72 @@ test('plan, accept two of three, and see them everywhere', async ({ browser }) =
   const page = await newPage(browser);
   await signIn(page, 'register');
 
-  // Signing in lands on the timer, which offers to connect a calendar. The fake one goes
-  // through the real OAuth routes (state cookie and all).
-  await page.locator('app-connect-prompt').getByRole('button', { name: 'Connect a test calendar' }).click();
-  await expect(page).toHaveURL(/\/plan$/);
+  // Signing in lands on the home page, with a door to each tab.
+  await expect(page.locator('a.door')).toHaveCount(3);
+  await page.locator('a.door', { hasText: 'Calendar' }).click();
+  await expect(page).toHaveURL(/\/calendar$/);
+
+  // The calendar offers to connect one. The fake one goes through the real OAuth routes
+  // (state cookie and all), then the offer goes away.
+  await page.locator('app-calendar-card').getByRole('button', { name: 'Connect a test calendar' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Calendar connected' })).toBeVisible();
-  await expect(page.locator('app-calendar-card')).toContainText('Test calendar connected');
+  await expect(page).toHaveURL(/\/calendar$/);
+  await expect(page.locator('app-calendar-card section')).toHaveCount(0);
 
   // Ask in plain words; the stub turns it into a plan_focus_blocks call.
   await page.locator('#plan-text').fill('plan three blocks next week');
   await page.getByRole('button', { name: 'Plan with Claude' }).click();
+  await expect(page).toHaveURL(/\/plan$/); // a command opens its own screen
   const review = page.locator('app-plan-review');
   await expect(review.locator('.blocks li')).toHaveCount(3);
-  await expect(review.getByText('Claude’s note')).toBeVisible();
+  await expect(review.locator('.narration')).toContainText('Claude');
 
   // Leave the third out and accept the rest.
   await review.locator('.blocks li').nth(2).getByRole('checkbox').uncheck();
   await review.getByRole('button', { name: 'Accept 2' }).click();
   await expect(page.getByRole('status').filter({ hasText: '2 blocks scheduled' })).toBeVisible();
+  await expect(page).toHaveURL(/\/calendar$/); // and accepting returns to the calendar
 
-  const timeline = page.locator('app-day-timeline .timeline');
   await expect(page.locator('app-block-chip[data-status="accepted"]')).toHaveCount(2);
-  const day = await timeline.getAttribute('data-day');
+  const day = await page.locator('.view').getAttribute('data-day');
   expect(day).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+  // The three views show the same two blocks.
+  await page.getByRole('tab', { name: 'Month' }).click();
+  await expect(page.locator('.item[data-kind="focus"]')).toHaveCount(2);
+  await page.locator(`.cell[data-day="${day}"]`).click();
+  await expect(page.getByRole('tab', { name: 'Day' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('app-block-chip[data-status="accepted"]')).not.toHaveCount(0);
+  await page.getByRole('tab', { name: 'Week' }).click();
+  await expect(page.locator('app-block-chip[data-status="accepted"]')).toHaveCount(2);
+
+  // A planned block opens its details, and can be moved to another day by keyboard.
+  const chip = page.locator('app-block-chip[data-status="accepted"]').first();
+  await chip.click();
+  await expect(page.locator('app-block-card')).toBeVisible();
+  await expect(page.locator('app-block-card').getByRole('button', { name: 'Start' })).toBeVisible();
+  await page.locator('app-block-card').getByRole('button', { name: 'Close' }).click();
+  const column = () => chip.evaluate((el) => el.closest<HTMLElement>('.col')!.dataset['day']);
+  const id = await chip.getAttribute('data-id');
+  const moved = page.locator(`app-block-chip[data-id="${id}"]`);
+  const dayBefore = await column();
+  await moved.focus();
+  await page.keyboard.press('Shift+ArrowRight');
+  await expect.poll(() => moved.evaluate((el) => el.closest<HTMLElement>('.col')!.dataset['day'])).not.toBe(dayBefore);
+
+  // And by dragging, an hour down its new day.
+  const before = await moved.getAttribute('aria-label');
+  const box = (await moved.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 72, { steps: 6 });
+  await page.mouse.up();
+  await expect(moved).not.toHaveAttribute('aria-label', before!);
 
   // A second browser, same account: the server owns the plan, so it shows the same two.
   const other = await newPage(browser);
   await signIn(other, 'login');
-  await other.goto(`/plan?day=${day}`);
+  await other.goto(`/calendar?day=${day}`);
   await expect(other.locator('app-block-chip[data-status="accepted"]')).toHaveCount(2);
   await expect(other.locator('app-block-chip[data-status="proposed"]')).toHaveCount(0);
 });
@@ -72,7 +110,7 @@ test('the page runs under its security policy, and signing out ends the session'
   const google = page.getByRole('button', { name: 'Sign in with Google' });
   await expect(google).toBeDisabled();
   await expect(google.locator('svg')).toBeVisible();
-  await expect(page.getByText("Google sign-in isn't set up on this server yet")).toBeVisible();
+  await expect(page.getByText('Add the Google keys to .env')).toBeVisible();
 
   // Styles and the self-hosted fonts really apply under the policy.
   await expect(page.locator('.title')).toHaveCSS('font-family', /Press Start 2P/);
@@ -97,7 +135,7 @@ test('the page runs under its security policy, and signing out ends the session'
   await page.locator('input[type=email]').fill(owner);
   await page.locator('input[type=password]').fill('password1234');
   await page.locator('form .btn-primary').click();
-  await expect(page.getByRole('alert')).toContainText('too easy to guess');
+  await expect(page.locator('.form-error')).toContainText('too easy to guess');
   await page.locator('input[type=password]').fill(password);
   await page.locator('form .btn-primary').click();
   await expect(page).toHaveURL(/\/$/);
@@ -111,6 +149,7 @@ test('the page runs under its security policy, and signing out ends the session'
   await thief.addCookies((await context.cookies()).filter((c) => c.name === 'bf_session'));
   expect((await thief.request.get('/api/me')).status()).toBe(200);
   await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Account' }).click();
   await page.getByRole('button', { name: 'Log out' }).click();
   await expect(page).toHaveURL(/\/login$/);
   expect((await thief.request.get('/api/me')).status()).toBe(401);

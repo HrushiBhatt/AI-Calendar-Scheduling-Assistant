@@ -1,32 +1,43 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { environment } from '../../environments/environment';
 import { Auth } from '../core/auth';
-import { Brew } from '../core/brew';
+import { Brew, SettingsTab } from '../core/brew';
 import { Settings } from '../core/models';
+import { Theme, ThemeChoice } from '../core/theme';
 import { browserZone } from '../core/time';
 import { Modal } from '../shared/modal';
 import { AccountSecurity } from './account-security';
 import { CalendarSettings } from './calendar-settings';
 
 type Toggle = 'sound' | 'notify' | 'autoBreak' | 'strict';
+type Flag = 'protectLunch' | 'assistantEnabled';
 type NumberSetting = 'bufferMin' | 'minGapMin' | 'maxBlocksPerDay' | 'maxFocusMinPerDay';
 
-const TOGGLES: { key: Toggle; label: string; hint: string }[] = [
-  { key: 'sound', label: 'Sound effects', hint: '8-bit chime when a focus block or break runs out.' },
-  { key: 'notify', label: 'Notifications', hint: 'Ping me when time is up and this tab is in the background.' },
-  { key: 'autoBreak', label: 'Auto-start breaks', hint: 'Begin the break as soon as you finish your reflection.' },
-  {
-    key: 'strict',
-    label: 'Strict mode',
-    hint: 'Log every tab switch mid-focus as a distraction, and ask before closing the tab.',
-  },
+const TABS: { id: SettingsTab; label: string }[] = [
+  { id: 'general', label: 'General' },
+  { id: 'planning', label: 'Planning' },
+  { id: 'calendar', label: 'Calendar' },
+  { id: 'account', label: 'Account' },
+];
+
+const THEMES: { id: ThemeChoice; label: string }[] = [
+  { id: 'system', label: 'System' },
+  { id: 'light', label: 'Light' },
+  { id: 'dark', label: 'Dark' },
+];
+
+const TOGGLES: { key: Toggle; label: string; title: string }[] = [
+  { key: 'sound', label: 'Sound', title: 'A chime when time is up' },
+  { key: 'notify', label: 'Notifications', title: 'When time is up and this tab is in the background' },
+  { key: 'autoBreak', label: 'Auto-start breaks', title: 'Start the break after your reflection' },
+  { key: 'strict', label: 'Strict mode', title: 'Log tab switches as distractions, and ask before closing' },
 ];
 
 const NUMBERS: { key: NumberSetting; label: string; min: number; max: number; unit: string }[] = [
-  { key: 'bufferMin', label: 'Buffer around meetings', min: 0, max: 60, unit: 'min' },
-  { key: 'minGapMin', label: 'Extra gap between blocks', min: 0, max: 120, unit: 'min' },
-  { key: 'maxBlocksPerDay', label: 'Most blocks in a day', min: 1, max: 12, unit: '' },
-  { key: 'maxFocusMinPerDay', label: 'Most focus in a day', min: 25, max: 720, unit: 'min' },
+  { key: 'bufferMin', label: 'Meeting buffer', min: 0, max: 60, unit: 'min' },
+  { key: 'minGapMin', label: 'Gap between blocks', min: 0, max: 120, unit: 'min' },
+  { key: 'maxBlocksPerDay', label: 'Blocks per day', min: 1, max: 12, unit: '' },
+  { key: 'maxFocusMinPerDay', label: 'Focus per day', min: 25, max: 720, unit: 'min' },
 ];
 
 function zones(): string[] {
@@ -37,164 +48,191 @@ function zones(): string[] {
   }
 }
 
+/** Settings: a panel with one short list per tab, saved as you go. */
 @Component({
   selector: 'app-settings-dialog',
   imports: [Modal, CalendarSettings, AccountSecurity],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-modal title="Settings" (closed)="brew.dialog.set(null)">
-      <div class="scroll">
-        <section class="group" aria-labelledby="set-timer">
-          <h3 id="set-timer">Timer</h3>
-          @for (t of toggles; track t.key) {
-            <label class="setting">
-              <span class="setting-label">{{ t.label }}</span>
-              <span class="setting-hint">{{ t.hint }}</span>
-              <input type="checkbox" class="switch" [checked]="brew.settings()[t.key]" (change)="toggle(t.key, $event)" />
-            </label>
+    <app-modal title="Settings" sheet (closed)="brew.dialog.set(null)">
+      <div class="panel">
+        <div class="segmented" role="tablist" aria-label="Settings" [style.--n]="tabs.length" [style.--i]="tabIndex()">
+          @for (t of tabs; track t.id) {
+            <button role="tab" [attr.aria-selected]="tab() === t.id" (click)="brew.settingsTab.set(t.id)">{{ t.label }}</button>
           }
-        </section>
+        </div>
 
-        <section class="group" aria-labelledby="set-plan">
-          <h3 id="set-plan">Planning</h3>
-          <p class="setting-hint">The planner never places a block outside these.</p>
-          <label class="row">
-            <span>Time zone</span>
-            <select class="input px" (change)="text('timeZone', $event)">
-              @if (!zoneList.includes(brew.settings().timeZone)) {
-                <option [value]="brew.settings().timeZone" selected>{{ brew.settings().timeZone || 'Not set' }}</option>
+        @for (current of [tab()]; track current) {
+          <div class="pane" role="tabpanel">
+            @switch (current) {
+              @case ('general') {
+                <div class="row">
+                  <span id="set-theme">Appearance</span>
+                  <div class="segmented theme" role="radiogroup" aria-labelledby="set-theme" [style.--n]="themes.length" [style.--i]="themeIndex()">
+                    @for (t of themes; track t.id) {
+                      <button role="radio" [attr.aria-checked]="theme.choice() === t.id" (click)="theme.set(t.id, $event)">{{ t.label }}</button>
+                    }
+                  </div>
+                </div>
+                @for (t of toggles; track t.key) {
+                  <label class="row" [title]="t.title">
+                    <span>{{ t.label }}</span>
+                    <input type="checkbox" class="switch" [checked]="brew.settings()[t.key]" (change)="toggle(t.key, $event)" />
+                  </label>
+                }
+                <p class="keys"><kbd>Space</kbd> start or pause <kbd>R</kbd> reset <kbd>S</kbd> finish</p>
               }
-              @for (z of zoneList; track z) {
-                <option [value]="z" [selected]="z === brew.settings().timeZone">{{ z }}</option>
+              @case ('planning') {
+                <label class="row">
+                  <span>Time zone</span>
+                  <select class="input zone" (change)="text('timeZone', $event)">
+                    @if (!zoneList.includes(brew.settings().timeZone)) {
+                      <option [value]="brew.settings().timeZone" selected>{{ brew.settings().timeZone || 'Not set' }}</option>
+                    }
+                    @for (z of zoneList; track z) {
+                      <option [value]="z" [selected]="z === brew.settings().timeZone">{{ z }}</option>
+                    }
+                  </select>
+                </label>
+                <div class="row">
+                  <span>Workday</span>
+                  <span class="pair">
+                    <input class="input" type="time" step="900" aria-label="Workday starts" [value]="brew.settings().workdayStart" (change)="text('workdayStart', $event)" />
+                    <input class="input" type="time" step="900" aria-label="Workday ends" [value]="brew.settings().workdayEnd" (change)="text('workdayEnd', $event)" />
+                  </span>
+                </div>
+                @for (n of numbers; track n.key) {
+                  <label class="row">
+                    <span>{{ n.label }}</span>
+                    <span class="pair">
+                      <input class="input num" type="number" [min]="n.min" [max]="n.max" [value]="brew.settings()[n.key]" (change)="number(n.key, $event)" />
+                      <span class="unit">{{ n.unit }}</span>
+                    </span>
+                  </label>
+                }
+                <label class="row" title="Keep 12:00 to 13:00 free">
+                  <span>Protect lunch</span>
+                  <input type="checkbox" class="switch" [checked]="brew.settings().protectLunch" (change)="flag('protectLunch', $event)" />
+                </label>
+                <label class="row">
+                  <span>{{ browserOnly ? 'Plain-language requests' : 'Plan with Claude' }}</span>
+                  <input type="checkbox" class="switch" [checked]="brew.settings().assistantEnabled" (change)="flag('assistantEnabled', $event)" />
+                </label>
               }
-            </select>
-          </label>
-          <div class="row">
-            <span>Workday</span>
-            <span class="pair">
-              <input class="input px" type="time" step="900" aria-label="Workday starts" [value]="brew.settings().workdayStart" (change)="text('workdayStart', $event)" />
-              <span aria-hidden="true">to</span>
-              <input class="input px" type="time" step="900" aria-label="Workday ends" [value]="brew.settings().workdayEnd" (change)="text('workdayEnd', $event)" />
-            </span>
-          </div>
-          @for (n of numbers; track n.key) {
-            <label class="row">
-              <span>{{ n.label }}</span>
-              <span class="pair">
-                <input class="input px num" type="number" [min]="n.min" [max]="n.max" [value]="brew.settings()[n.key]" (change)="number(n.key, $event)" />
-                <span class="unit">{{ n.unit }}</span>
-              </span>
-            </label>
-          }
-          <label class="setting">
-            <span class="setting-label">Protect lunch</span>
-            <span class="setting-hint">Keep 12:00 to 13:00 free of focus blocks.</span>
-            <input type="checkbox" class="switch" [checked]="brew.settings().protectLunch" (change)="flag('protectLunch', $event)" />
-          </label>
-          <label class="setting">
-            <span class="setting-label">Planning assistant</span>
-            <span class="setting-hint">Type requests in plain words. Off, the planner uses the form only.</span>
-            <input type="checkbox" class="switch" [checked]="brew.settings().assistantEnabled" (change)="flag('assistantEnabled', $event)" />
-          </label>
-        </section>
-
-        <app-calendar-settings />
-
-        @if (!browserOnly) {
-          <app-account-security />
-          <p class="setting-hint">Settings are saved to your account, so they follow you to every device.</p>
-        }
-        <p class="shortcuts"><kbd>Space</kbd> start / pause · <kbd>R</kbd> reset · <kbd>S</kbd> finish or skip</p>
-        @if (browserOnly) {
-          <p class="setting-hint">
-            This is a demo: everything is saved in this browser, with no account. The full app adds sign-in, Google
-            Calendar, the AI assistant and timers that keep running on a server.
-          </p>
-          <button class="btn btn-sm px" (click)="resetDemo()">Reset the demo</button>
-        } @else {
-          <div class="account">
-            <span>Signed in as <b>{{ auth.user()?.email }}</b></span>
-            <button class="btn btn-sm px" (click)="logout()">Log out</button>
+              @case ('calendar') {
+                <app-calendar-settings />
+              }
+              @case ('account') {
+                @if (browserOnly) {
+                  <p class="muted">Demo data stays in this browser.</p>
+                  <button class="btn btn-sm self" (click)="resetDemo()">Reset the demo</button>
+                } @else {
+                  <div class="row">
+                    <span class="email">{{ auth.user()?.email }}</span>
+                    <button class="btn btn-sm" (click)="logout()">Log out</button>
+                  </div>
+                  <app-account-security />
+                }
+                <button class="btn btn-sm btn-danger self" (click)="brew.clearData()">Delete all sessions</button>
+              }
+            }
           </div>
         }
-        <button class="btn btn-danger px" (click)="brew.clearData()">Delete all sessions</button>
       </div>
     </app-modal>
   `,
   styles: `
-    .scroll {
+    .panel {
       display: grid;
-      gap: 20px;
-      max-height: calc(100dvh - 160px);
-      margin: -6px;
-      padding: 6px;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 18px;
+      height: 100%;
+      min-height: 0;
+    }
+    .pane {
+      display: grid;
+      align-content: start;
+      gap: 16px;
+      padding-right: 4px;
       overflow-y: auto;
-    }
-    .group {
-      display: grid;
-      gap: 14px;
-      padding-bottom: 18px;
-      border-bottom: 2px dashed var(--gray-700);
-    }
-    h3 {
-      font-family: var(--font-pixel);
-      font-size: 0.55rem;
-      color: var(--accent);
-      text-transform: uppercase;
+      animation: rise 0.3s var(--ease-out) both;
     }
     .row {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 8px 14px;
-      font-size: 0.85rem;
-      color: var(--gray-300);
+      gap: 8px 16px;
+      min-height: 38px;
+      font-size: 0.875rem;
+      cursor: default;
     }
-    .row select {
+    label.row {
+      cursor: pointer;
+    }
+    .theme {
+      width: 210px;
+    }
+    .zone {
       width: auto;
-      max-width: 230px;
+      max-width: 220px;
     }
     .pair {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
     .pair .input {
       width: auto;
     }
-    .num {
-      width: 74px !important;
+    .pair .num {
+      width: 72px;
     }
     .unit {
-      min-width: 2.2em;
+      min-width: 1.8em;
       font-size: 0.75rem;
-      color: var(--gray-500);
+      color: var(--text-3);
     }
-    .account {
+    .email {
+      overflow-wrap: anywhere;
+      color: var(--text-2);
+    }
+    .self {
+      justify-self: start;
+    }
+    .keys {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      font-size: 0.85rem;
-      color: var(--gray-300);
+      gap: 6px;
+      margin-top: 8px;
+      font-size: 0.75rem;
+      color: var(--text-3);
+    }
+    .keys kbd:not(:first-child) {
+      margin-left: 8px;
     }
   `,
 })
 export class SettingsDialog {
   protected readonly brew = inject(Brew);
   protected readonly auth = inject(Auth);
+  protected readonly theme = inject(Theme);
+  protected readonly themes = THEMES;
+  protected readonly themeIndex = computed(() => THEMES.findIndex((t) => t.id === this.theme.choice()));
+  protected readonly tabs = TABS;
   protected readonly toggles = TOGGLES;
   protected readonly numbers = NUMBERS;
   protected readonly zoneList = zones();
   protected readonly browserOnly = environment.browserBackend;
+  protected readonly tab = this.brew.settingsTab;
+  protected readonly tabIndex = computed(() => TABS.findIndex((t) => t.id === this.tab()));
 
   protected toggle(key: Toggle, event: Event): void {
     void this.brew.updateSettings({ [key]: (event.target as HTMLInputElement).checked });
   }
 
-  protected flag(key: 'protectLunch' | 'assistantEnabled', event: Event): void {
+  protected flag(key: Flag, event: Event): void {
     void this.brew.updateSettings({ [key]: (event.target as HTMLInputElement).checked });
   }
 

@@ -3,7 +3,7 @@
   @for (puff of steam; track $index) {
     <g>
       @for (p of puff; track $index) {
-        <rect [attr.x]="p[0]" [attr.y]="p[1]" width="4" height="4" [attr.fill]="'rgba(255,255,255,' + (0.6 - $index * 0.1) + ')'" />
+        <rect [attr.x]="p[0]" [attr.y]="p[1]" width="4" height="4" fill="currentColor" [attr.opacity]="0.6 - $index * 0.1" />
       }
     </g>
   }

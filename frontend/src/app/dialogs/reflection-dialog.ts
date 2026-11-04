@@ -13,44 +13,50 @@ import { Sprite } from '../shared/sprite';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (brew.reflecting(); as done) {
-      <app-modal [title]="done.session.completed ? 'Brew complete!' : 'Brew ended early'" (closed)="brew.finishReflection('')">
+      <app-modal [title]="done.session.completed ? 'Nice work' : 'Ended early'" (closed)="brew.finishReflection('')">
         <p class="summary">
-          You focused for <b>{{ round(done.session.focused / 60) | minutes }}</b>
+          <b>{{ round(done.session.focused / 60) | minutes }}</b>
           @if (done.session.intention) {
             on <q>{{ done.session.intention }}</q>
-          }.
+          }
         </p>
         @if (unlocked(); as item) {
-          <div class="unlock px">
+          <div class="unlock">
             <app-sprite class="unlock-sprite" [rows]="item.rows" [palette]="item.palette" />
-            <p>New for your café: <b>{{ item.name }}</b></p>
+            <p>Unlocked: <b>{{ item.name }}</b></p>
           </div>
         }
         <form class="modal-form" (submit)="save($event)">
-          <label class="field">
-            In one sentence, what did you get done?
-            <textarea class="input px" data-autofocus rows="2" maxlength="280" [formControl]="note" (keydown.enter)="submitOnEnter($event)"></textarea>
-          </label>
+          <textarea
+            class="input"
+            data-autofocus
+            rows="2"
+            maxlength="280"
+            aria-label="What got done?"
+            placeholder="What got done?"
+            [formControl]="note"
+            (keydown.enter)="submitOnEnter($event)"
+          ></textarea>
           <div class="modal-actions">
-            <button type="button" class="btn px" (click)="brew.finishReflection('')">Skip</button>
-            <button class="btn btn-primary px">Save to journal</button>
+            <button type="button" class="btn btn-ghost" (click)="brew.finishReflection('')">Skip</button>
+            <button class="btn btn-primary">Save</button>
           </div>
         </form>
       </app-modal>
     }
   `,
   styles: `
-    .summary { line-height: 1.6; color: var(--cream); }
-    q { color: var(--accent-bright); }
+    .summary { font-size: 0.95rem; line-height: 1.5; }
+    q { color: var(--accent-text); }
     .unlock {
-      --bd: var(--accent);
       display: flex;
       align-items: center;
-      gap: 16px;
-      margin: 3px;
-      padding: 12px 16px;
+      gap: 14px;
+      padding: 10px 14px;
+      font-size: 0.875rem;
       background: var(--accent-soft);
-      animation: pop 0.4s var(--ease-bounce);
+      border-radius: var(--radius-sm);
+      animation: pop 0.5s var(--ease-spring) both;
     }
     .unlock-sprite { flex: none; width: 44px; height: 44px; }
   `,

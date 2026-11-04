@@ -11,7 +11,7 @@
   gap: 8px;
   padding: 0 4px 10px;
   text-align: center;
-  border-bottom: 6px solid #4e342e; /* the wooden plank */
+  border-bottom: 4px solid #4e3a2a; /* the wooden plank */
 }
 
 .sprite {
@@ -36,13 +36,13 @@
   font-family: var(--font-pixel);
   font-size: 0.42rem;
   line-height: 1.6;
-  color: var(--gray-500);
+  color: var(--text-3);
 }
 
 .unlocked .name {
   font-family: var(--font-main);
   font-size: 0.72rem;
-  color: var(--gray-300);
+  color: var(--text-2);
 }
 
 .next {
@@ -50,17 +50,25 @@
   gap: 10px;
   margin-top: 20px;
   font-size: 0.85rem;
-  color: var(--gray-400);
+  color: var(--text-2);
 }
 
 .meter {
-  height: 10px;
-  background: var(--gray-800);
+  height: 5px;
+  overflow: hidden;
+  background: var(--surface-3);
+  border-radius: 99px;
 }
 
 .meter span {
   display: block;
   height: 100%;
   background: var(--accent);
+  border-radius: 99px;
   transition: width 0.6s var(--ease-out);
+  animation: meter-in 0.9s var(--ease-out) both;
+}
+
+@keyframes meter-in {
+  from { width: 0; }
 }

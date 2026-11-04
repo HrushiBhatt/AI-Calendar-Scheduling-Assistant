@@ -9,23 +9,21 @@ import { Modal } from '../shared/modal';
   imports: [Modal, ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-modal title="Set an intention" (closed)="brew.dialog.set(null)">
+    <app-modal title="What's the focus?" (closed)="brew.dialog.set(null)">
       <form class="modal-form" [formGroup]="form" (ngSubmit)="start()">
-        <label class="field">
-          What's the one thing this {{ brew.mode().focus }}-minute brew is for?
-          <input
-            class="input px"
-            data-autofocus
-            formControlName="intention"
-            maxlength="140"
-            [placeholder]="taskTitle() ? 'Defaults to: ' + taskTitle() : 'e.g. Draft the intro section'"
-          />
-        </label>
+        <input
+          class="input"
+          data-autofocus
+          formControlName="intention"
+          maxlength="140"
+          aria-label="Intention"
+          [placeholder]="taskTitle() || 'One thing, ' + brew.mode().focus + ' minutes'"
+        />
         @if (openTasks().length) {
           <label class="field">
             Task
-            <select class="input px" formControlName="taskId">
-              <option [ngValue]="null">No task</option>
+            <select class="input" formControlName="taskId">
+              <option [ngValue]="null">None</option>
               @for (task of openTasks(); track task.id) {
                 <option [ngValue]="task.id">{{ task.title }} ({{ task.brews }}/{{ task.estimate }})</option>
               }
@@ -34,10 +32,10 @@ import { Modal } from '../shared/modal';
         }
         <label class="check">
           <input type="checkbox" formControlName="breathe" />
-          Two rounds of box breathing first (~30s)
+          Breathe first
         </label>
         <div class="modal-actions">
-          <button class="btn btn-primary px">Start brewing</button>
+          <button class="btn btn-primary">Start</button>
         </div>
       </form>
     </app-modal>

@@ -4,8 +4,9 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Subject } from 'rxjs';
 import { Assistant } from './assistant';
+import { Auth } from './auth';
 import { LiveEvents } from './live';
-import { LiveEvent, PlanView, ScheduledBlock } from './models';
+import { LiveEvent, PlanView, ScheduledBlock, User } from './models';
 
 const block = (id: number): ScheduledBlock => ({
   id, plan_id: 4, task_id: 1, new_task: false, session_id: null, mode: 'Animedoro', starts_at: '2026-10-26T14:00:00Z',
@@ -53,5 +54,27 @@ describe('Assistant', () => {
     const accepting = assistant.accept(plan, new Set());
     http.expectOne('/api/plans/4/accept').flush({ error: 'that overlaps Standup' }, { status: 409, statusText: 'Conflict' });
     expect(await accepting).toBe(false);
+  });
+
+  it('shows a new plan as soon as the answer arrives, keeping an open conflict', async () => {
+    const conflict = { ...plan, id: 9, source: 'conflict' } as PlanView;
+    assistant.live.set([{ ...plan, id: 3 }, conflict]);
+    const asking = assistant.request({ text: 'three blocks' });
+    http.expectOne('/api/assistant/plan').flush({ plan, narration: '', degraded: false });
+    await asking;
+    expect(assistant.proposal()?.id).toBe(4);
+    expect(assistant.conflict()?.id).toBe(9);
+    expect(assistant.pending()).toBe(false);
+  });
+
+  it("doesn't throw when the open plans can't be loaded", async () => {
+    TestBed.inject(Auth).user.set({ id: 1, settings: { timeZone: 'UTC' } } as User);
+    TestBed.tick();
+    http.expectOne('/api/plans/live').flush({ error: 'down' }, { status: 500, statusText: 'Server Error' });
+    await new Promise((resolve) => setTimeout(resolve));
+    TestBed.tick();
+    expect(assistant.live.error()).toBeTruthy();
+    expect(assistant.proposal()).toBeNull();
+    expect(assistant.conflict()).toBeNull();
   });
 });

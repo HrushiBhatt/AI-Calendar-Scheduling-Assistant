@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -105,7 +106,7 @@ func (h *handler) events(c *gin.Context) {
 			if !open { // dropped as too slow, or the server is shutting down
 				return false
 			}
-			c.SSEvent(e.Type, e.Data)
+			c.SSEvent(e.Type, eventData(e.Data))
 			return true
 		case <-ping.C:
 			if !h.Auth.SessionActive(session) {
@@ -119,4 +120,13 @@ func (h *handler) events(c *gin.Context) {
 
 func eventOf(kind string, data any) events.Event {
 	return events.Event{Type: kind, Data: data}
+}
+
+// eventData makes an event with no data valid JSON. Left as nil, the stream would carry the
+// text "<nil>", which the page can't parse, and it would drop the event.
+func eventData(data any) any {
+	if data == nil {
+		return json.RawMessage("null")
+	}
+	return data
 }

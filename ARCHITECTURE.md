@@ -107,15 +107,44 @@ A new user has no history, so each hour starts at a flat prior that blends towar
 **Safety.** There are no accounts, so the demo never asks for a password. It sends nothing anywhere, and it carries the same Content-Security-Policy as a meta tag, because Pages can't send response headers. The in-browser backend is only bundled in this build: the normal build doesn't contain it.
 **History.** An earlier Pages build was reverted (commits `606a645`, `13b0c26`), because it replaced the scheduler with TypeScript and predated the planner. Renaming the repo later left that stale build blank, since it had the old repo path hardcoded. The path now comes from the repo's name at build time.
 
+### A home page, three tabs, and a screen for each command
+
+**Decision.** The app opens on a simple home page with one door each to Calendar, Focus and Progress. Those three are a floating tab bar. One bar under it asks for a plan from any screen but Focus, and sending it opens a dedicated plan screen, where proposed blocks appear on the same grid as meetings beside the decision to make.
+**Why.** The project grew from a timer into a scheduler, so it needs a neutral place to start. Reviewing a plan on the grid shows what it does to your day, which a list can't. Giving a command its own screen makes clear that something happened, and nothing is scheduled until it's accepted. Focus has no bar so the timer stays free of distractions.
+**Cost.** The timer is a click further away, though a running one is always visible as a small ring in the top bar.
+
+### Liquid glass over one photograph
+
+**Decision.** A fixed photograph sits behind everything, under a thin veil that differs by theme. All content is on translucent cards with `backdrop-filter`. The page content takes a `view-transition-name` only while a transition is playing.
+**Why.** A named element becomes a backdrop root, so nothing inside it can blur what's behind it. Naming the content permanently turned every card into plain tinted glass, with sharp mountains showing through the text. During a transition the same limit applies, so cards go more opaque for the move and ease back afterwards, which hides the blur returning.
+**Keeping it readable.** Contrast depends on what's behind the glass, so it was checked against the photograph's real extremes after downsampling to match the blur. A different photograph needs that check again.
+**Cost.** The image adds 1.7 MB on large screens and about 680 KB on small ones. `backdrop-filter` also costs some GPU work, so inner elements use flat tints rather than more blur.
+
+### Week columns share a clock, a single day shows real hours
+
+**Decision.** A week lays items out by wall-clock time, so columns line up with one set of hour labels. A single day lays them out by elapsed time, so the autumn change shows 1 AM twice.
+**Why.** A week needs one axis for seven days, and only a few hours a year differ. The day view is where someone would look at those hours, so it stays exact. Moving a block across days keeps its wall-clock time, so a clock change between them can't shift it. The month view asks for up to six weeks, so the schedule route allows 43 days: a six-week range across the autumn change is an hour longer than 42.
+
+### Motion is CSS, and the mug stays pixel art
+
+**Decision.** Animation uses CSS and the browser's View Transitions, with no animation library. It sticks to `transform` and `opacity` where it can, and `prefers-reduced-motion` turns it off. The interface uses Outfit, and pixel art is kept for the mug, the clock, the wordmark and the café.
+**Why.** A library would add weight and a dependency for effects the browser does well, and it could need changes to the Content-Security-Policy. Keeping one pixel centerpiece keeps the app's character without making a dense calendar hard to read.
+
+### The theme belongs to the device
+
+**Decision.** Light, dark or the system's choice, saved in the browser rather than on the account. `public/theme-init.js` applies it before the first paint, and `core/theme.ts` takes over once the app loads. Every color is a token defined for both themes, on `:root` and `:root[data-theme='light']` in `styles.css`.
+**Why.** A phone can follow its own setting while a laptop stays dark, which an account-wide setting couldn't do. Setting the theme before the first paint stops a light page flashing dark, and it has to be a separate file because the Content-Security-Policy allows no inline scripts.
+**Cost.** The choice doesn't follow you to a new device, and the storage key and colors live in two files that must stay in step. A browser test loads the page with the app blocked to prove the early script works alone.
+
 ### A feature without keys stays visible
 
-**Decision.** Without keys, the Google buttons show disabled and the Plan page offers the form. Each says what's missing. The server reports whether it has a model through `assistant_available` on the user.
+**Decision.** Without keys, the Google buttons show disabled and the calendar offers the options form. Each says what's missing. The server reports whether it has a model through `assistant_available` on the user.
 **Why.** These buttons used to disappear, so a missing or misplaced `.env` looked like the features didn't exist, with nothing on screen to explain it.
 **Cost.** A server run without keys tells its visitors so. That's acceptable, because a real deployment has its keys.
 
 ### Google sign-in and Google Calendar are separate consents
 
-**Decision.** Sign-in asks only for `openid`, `email` and `profile`. Connecting a calendar is a second consent, offered on the Brew and Plan pages.
+**Decision.** Sign-in asks only for `openid`, `email` and `profile`. Connecting a calendar is a second consent, offered on the calendar page.
 **Why.** Someone can use the app without giving it their calendar, and Google's guidelines ask apps to request scopes when a feature needs them. The cost is a second consent screen for people who want both.
 
 ## Security architecture

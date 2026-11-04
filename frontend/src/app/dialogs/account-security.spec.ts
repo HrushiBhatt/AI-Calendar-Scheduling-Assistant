@@ -50,7 +50,7 @@ describe('AccountSecurity', () => {
     TestBed.resetTestingModule();
     const on = await open(account({ google_linked: true }));
     expect(on.el.querySelector('a[href="/api/auth/google/link"]')).toBeNull();
-    expect(on.el.textContent).toContain('Remove Google sign-in');
+    expect(on.el.querySelector('button[aria-label="Remove Google sign-in"]')).not.toBeNull();
   });
 
   it('hides Google when the server has none', async () => {

@@ -1,0 +1,32 @@
+.layers {
+  display: grid;
+  gap: 11px;
+}
+
+.layer {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.layer-name {
+  overflow: hidden;
+  font-size: 0.8rem;
+  color: var(--text-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-pick {
+  text-decoration: underline dotted var(--text-3);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.sub {
+  margin: 16px 0 8px;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--text-2);
+}

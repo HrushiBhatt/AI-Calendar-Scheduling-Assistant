@@ -5,18 +5,32 @@
 
 svg {
   display: block;
+  width: 100%;
+  min-width: 720px;
+  max-width: 1080px;
+  height: auto;
   margin-inline: auto;
 }
 
 text {
   font-family: var(--font-main);
   font-size: 9px;
-  fill: var(--gray-500);
+  fill: var(--text-3);
+}
+
+rect {
+  rx: 2px;
+  animation: heat-in 0.5s var(--ease-out) both;
+  animation-delay: calc(var(--col) * 9ms);
 }
 
 rect:hover {
-  stroke: var(--cream-light);
+  stroke: var(--text);
   stroke-width: 1.5;
+}
+
+@keyframes heat-in {
+  from { opacity: 0; }
 }
 
 .heat-0 { fill: var(--heat-0); background: var(--heat-0); }
@@ -33,7 +47,7 @@ rect:hover {
   gap: 8px 16px;
   margin-top: 12px;
   font-size: 0.8rem;
-  color: var(--gray-400);
+  color: var(--text-3);
 }
 
 .legend {
@@ -46,4 +60,5 @@ rect:hover {
 .swatch {
   width: 11px;
   height: 11px;
+  border-radius: 2px;
 }

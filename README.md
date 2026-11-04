@@ -28,7 +28,7 @@ tells you why it chose each one, and starts each block by itself. The timers run
 ## See it run
 
 <div align="center">
-  <img src="docs/assets/demo.gif" alt="Walkthrough: typing a request, reviewing three proposed blocks with their reasons, accepting two, starting a focus timer, and opening the progress page" width="880"/>
+  <img src="docs/assets/demo.gif" alt="Walkthrough: opening the calendar from the home page, asking Claude for a plan, the plan screen unfolding with proposed blocks between meetings, accepting them, and starting a focus session" width="880"/>
   <br/>
   <sub>Recorded from the running app with the demo account. The calendar is the demo's in-memory one and the assistant is the test stand-in for the model; the scheduler, timer and interface are the real code.</sub>
 </div>
@@ -56,28 +56,37 @@ The demo runs entirely in your browser, and **its scheduler is the same Go code 
 | | Feature | What you get |
 |:-:|---|---|
 | ☕ | **Timers that run on the server** | Close the tab, switch devices or restart the server. A running block keeps its place, and every open tab stays in sync |
-| 🗓️ | **Calendar-aware planning** | Connect Google Calendar and blocks land only in real free time, around meetings, buffers and lunch |
-| 💬 | **Plain-language requests** | Type what you want, or use the form. Both reach the same scheduler, and the form needs no AI at all |
+| 🗓️ | **Day, week and month** | See your meetings and focus blocks at any scale, and drag blocks between hours and days |
+| 🤖 | **Calendar-aware planning** | Connect Google Calendar and blocks land only in real free time, around meetings, buffers and lunch |
+| 💬 | **One bar to ask** | Type what you want from almost any screen, and a plan screen opens. Options reach the same scheduler and need no AI at all |
 | 🧠 | **Explained decisions** | Every block says why it's there: *"you finish 88% of blocks you start at this hour"* |
 | ✅ | **You stay in charge** | Accept all, some or none, and drag blocks around. Nothing on your schedule moves without you |
 | ⏰ | **Blocks that start themselves** | A 60-second countdown offers Start now, Delay 10 min or Skip. If you do nothing, it starts |
 | 🔄 | **Reacts to your calendar** | A meeting lands on an accepted block? The block is flagged and a replacement is proposed |
 | 📈 | **Progress you can see** | Streaks, a year heatmap, a reflection journal, planning metrics and a pixel café that grows as you finish brews |
 | 🎧 | **A place to focus** | Mix rain, café, fireplace and lo-fi ambience, breathe before a block, and log distractions in strict mode |
+| 🏔️ | **Liquid glass** | Content floats on translucent glass over a 4K photograph, with smooth transitions between screens |
+| 🌗 | **Light and dark** | Follows your system, or pick one. The choice is remembered and never flashes the wrong theme on load |
 | 🔐 | **Accounts built to be hard to break** | Sign in with Google or a bcrypt-hashed password. Sessions end for real when you sign out |
 
 <table>
   <tr>
-    <td width="33%"><img src="docs/assets/screen-plan.png" alt="The Plan page: three proposed blocks on a day timeline between meetings, each with the scheduler's reason"/></td>
-    <td width="33%"><img src="docs/assets/screen-timer.png" alt="The Brew page: a running focus timer inside the pixel mug, with tasks and ambience controls"/></td>
+    <td width="33%"><img src="docs/assets/screen-calendar.png" alt="The plan screen in week view: three proposed blocks between meetings on a glass calendar, with a review panel beside it, over a mountain photograph"/></td>
+    <td width="33%"><img src="docs/assets/screen-focus.png" alt="The Focus page: a running timer inside the pixel mug on a glass card, ringed by its progress, with tasks and sound controls faded to the sides"/></td>
     <td width="33%"><img src="docs/assets/screen-progress.png" alt="The Progress page: stats, a yearly consistency heatmap and planning insights"/></td>
   </tr>
   <tr align="center">
-    <td><sub><b>Plan.</b> Proposals with their reasons</sub></td>
-    <td><sub><b>Brew.</b> The timer lives on the server</sub></td>
+    <td><sub><b>Plan.</b> Review it where the time is</sub></td>
+    <td><sub><b>Focus.</b> The timer lives on the server</sub></td>
     <td><sub><b>Progress.</b> Habits and planning metrics</sub></td>
   </tr>
 </table>
+
+<div align="center">
+  <img src="docs/assets/screen-home.png" alt="The home page in light mode: a greeting and three glass cards for Calendar, Focus and Progress over a snowy mountain range, under the tab bar and the bar for asking Claude" width="560"/>
+  <br/>
+  <sub><b>Home, in light mode.</b> One door to each part of the app</sub>
+</div>
 
 ## How it works
 
@@ -221,8 +230,8 @@ sequenceDiagram
 
 | Measure | Result |
 |---|---|
-| Backend tests | **139 tests and 441 subtests**, always under the race detector in CI |
-| Frontend tests | **64 unit tests** and **9 full browser tests**: 2 against the Go server and 7 against the static demo, served the way GitHub Pages serves it |
+| Backend tests | **141 tests and 441 subtests**, always under the race detector in CI |
+| Frontend tests | **106 unit tests** and **11 full browser tests**: 2 against the Go server and 9 against the static demo, served the way GitHub Pages serves it |
 | Scheduler | **17 golden fixtures**, including a daylight-saving day and a red-eye across midnight, plus a property test over **400 random calendars** in five time zones |
 | Scheduler speed | **About 82 µs** to plan a busy week (5 runs: 79 to 86 µs, Apple M2) |
 | Password hashing | **281 ms** per bcrypt hash at cost 12 (Apple M2) |
@@ -311,7 +320,7 @@ Copy [`.env.example`](.env.example) to `.env`, which git ignores, and put real v
 | `GOOGLE_REDIRECT_URL` | Google Calendar | e.g. `http://localhost:4200/api/calendar/callback` |
 | `CALENDAR_ENC_KEY` | a connected calendar | 32 bytes as hex. `openssl rand -hex 32` |
 | `PUBLIC_URL` | push notifications | An `https://` URL Google can reach. Unset, calendars are polled every 5 minutes |
-| `ANTHROPIC_API_KEY` | the assistant | Unset, the Plan page offers the form and says Claude isn't set up |
+| `ANTHROPIC_API_KEY` | the assistant | Unset, the calendar offers the options form and says Claude isn't set up |
 | `ASSISTANT_DAILY_TOKENS` | a higher or lower limit | Tokens per user per day, 50,000 by default. A request averaged about 5,900 in the eval, so that's about 9 a day |
 | `DEMO` | trying it | `true` seeds the demo account. Its password is public, so don't enable it on a server holding real data |
 
@@ -373,7 +382,8 @@ backend/
     store/             GORM models, sealed tokens, SQLite
     api/               Gin handlers and security middleware
   cmd/plannerwasm/     the scheduler compiled to WebAssembly, for the live demo
-frontend/src/app/      login, brew, plan, progress, dialogs, core services
+frontend/src/app/      home, calendar, focus, tasks, progress, login, dialogs, core services
+frontend/src/assets/   the background photograph
   core/local/          the live demo's in-browser backend and sample data
 frontend/e2e/          browser tests against the Go server
 frontend/e2e-pages/    browser tests against the static demo

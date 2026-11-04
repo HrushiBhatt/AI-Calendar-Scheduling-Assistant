@@ -12,7 +12,9 @@ import (
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/store"
 )
 
-const maxScheduleRange = 31 * 24 * time.Hour
+// maxScheduleRange fits the calendar's month view, which shows up to six weeks. The extra day
+// is for a range that crosses the autumn clock change, which makes it an hour longer.
+const maxScheduleRange = 43 * 24 * time.Hour
 
 // eventView is a calendar event as the day timeline draws it.
 type eventView struct {
@@ -97,7 +99,7 @@ func parseRange(fromRaw, toRaw string, loc *time.Location, now time.Time) (time.
 		return time.Time{}, time.Time{}, errors.New("to must be after from")
 	}
 	if to.Sub(from) > maxScheduleRange {
-		return time.Time{}, time.Time{}, errors.New("ask for at most 31 days at a time")
+		return time.Time{}, time.Time{}, errors.New("ask for at most six weeks at a time")
 	}
 	return from, to, nil
 }

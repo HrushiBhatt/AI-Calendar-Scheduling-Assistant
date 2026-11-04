@@ -12,23 +12,34 @@ export const routes: Routes = [
     path: '',
     pathMatch: 'full',
     canActivate: [authGuard],
-    loadComponent: () => import('./brew/brew-page').then((m) => m.BrewPage),
+    loadComponent: () => import('./home/home-page').then((m) => m.HomePage),
   },
   {
+    path: 'calendar',
+    canActivate: [authGuard],
+    loadComponent: () => import('./calendar/calendar-page').then((m) => m.CalendarPage),
+  },
+  {
+    // Where a command to the assistant bar lands.
     path: 'plan',
     canActivate: [authGuard],
-    loadComponent: () => import('./plan/plan-page').then((m) => m.PlanPage),
+    loadComponent: () => import('./calendar/plan-page').then((m) => m.PlanPage),
   },
   {
-    // Where the calendar OAuth flow lands: opens the settings dialog with the outcome.
-    path: 'settings',
+    path: 'focus',
     canActivate: [authGuard],
-    loadComponent: () => import('./dialogs/settings-route').then((m) => m.SettingsRoute),
+    loadComponent: () => import('./focus/focus-page').then((m) => m.FocusPage),
   },
   {
     path: 'progress',
     canActivate: [authGuard],
     loadComponent: () => import('./progress/progress-page').then((m) => m.ProgressPage),
+  },
+  {
+    // Where the OAuth flows land: reports how it went and moves on to a real page.
+    path: 'settings',
+    canActivate: [authGuard],
+    loadComponent: () => import('./dialogs/settings-route').then((m) => m.SettingsRoute),
   },
   { path: '**', redirectTo: '' },
 ];

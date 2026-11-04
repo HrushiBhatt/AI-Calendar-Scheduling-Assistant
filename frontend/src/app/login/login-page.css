@@ -1,83 +1,80 @@
+.corner {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+}
+
 .welcome {
   display: grid;
   justify-items: center;
-  gap: 16px;
-  max-width: 420px;
-  margin: 24px auto 0;
+  max-width: 400px;
+  min-height: calc(100dvh - 40px);
+  align-content: center;
+  margin-inline: auto;
+}
+
+.panel {
+  width: 100%;
+  padding: 24px;
+  animation: rise 0.6s var(--ease-out) both;
+}
+
+.brand {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
   text-align: center;
 }
 
 .mug {
-  width: 150px;
+  width: 104px;
+  animation: float 5s ease-in-out infinite;
 }
 
 .title {
   font-family: var(--font-pixel);
-  font-size: 1.3rem;
-  line-height: 1.4;
-  background: linear-gradient(135deg, var(--cream-light), var(--accent));
+  font-size: 1.05rem;
+  font-weight: 400;
+  line-height: 1.5;
+  background: linear-gradient(135deg, var(--text), var(--accent));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
 .tagline {
-  font-size: 0.95rem;
-  color: var(--gray-400);
-}
-
-.card {
-  width: calc(100% - 6px);
-  margin-top: 12px;
-  text-align: left;
+  font-size: 0.875rem;
+  color: var(--text-2);
 }
 
 .switch-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding: 0 3px;
-  margin-bottom: 22px;
-}
-
-.seg {
-  padding: 12px 4px;
-  font-family: var(--font-pixel);
-  font-size: 0.5rem;
-  color: var(--gray-400);
-  background: var(--gray-850);
-}
-
-.seg[aria-selected='true'] {
-  --bd: var(--accent);
-  color: var(--accent-bright);
-  background: var(--accent-soft);
-}
-
-.optional {
-  color: var(--gray-500);
-}
-
-.form-error {
-  font-size: 0.85rem;
-  color: var(--danger);
-}
-
-.password-hint {
-  font-size: 0.75rem;
-  color: var(--gray-500);
-  text-align: left;
+  margin-bottom: 16px;
 }
 
 .setup-hint {
-  margin-top: 10px;
+  margin-top: 8px;
   font-size: 0.75rem;
-  color: var(--gray-400);
+  color: var(--text-3);
 }
 
 .or {
-  margin: 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0;
   font-size: 0.75rem;
-  color: var(--gray-500);
-  text-align: center;
+  color: var(--text-3);
+}
+
+.or::before,
+.or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line-2);
+}
+
+@keyframes float {
+  50% { transform: translateY(-7px); }
 }

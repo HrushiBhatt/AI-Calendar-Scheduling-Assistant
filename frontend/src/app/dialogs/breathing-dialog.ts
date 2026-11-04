@@ -21,7 +21,7 @@ const ROUNDS = 2;
         <p class="breath-count">{{ 4 - (elapsed() % 4) }}</p>
       </div>
       <div class="modal-actions">
-        <button class="btn px" (click)="brew.launch()">Skip to focus</button>
+        <button class="btn btn-ghost" (click)="brew.launch()">Skip</button>
       </div>
     </app-modal>
   `,

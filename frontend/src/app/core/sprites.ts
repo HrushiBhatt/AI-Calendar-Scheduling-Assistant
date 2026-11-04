@@ -1,7 +1,7 @@
 /**
  * Pixel art as text: each string is a row, each character a pixel, '.' is
- * transparent. Icons use 'x' (drawn in currentColor); café items carry their
- * own palettes. Café ids match the unlock thresholds on the server.
+ * transparent. Café items carry their own palettes, and their ids match the
+ * unlock thresholds on the server.
  */
 
 export interface CafeItem {
@@ -11,16 +11,6 @@ export interface CafeItem {
   palette: Record<string, string>;
   rows: string[];
 }
-
-export const ICONS: Record<string, string[]> = {
-  play: ['x......', 'xxx....', 'xxxxx..', 'xxxxxxx', 'xxxxx..', 'xxx....', 'x......'],
-  pause: ['xx..xx', 'xx..xx', 'xx..xx', 'xx..xx', 'xx..xx', 'xx..xx', 'xx..xx'],
-  skip: ['x....xx', 'xx...xx', 'xxx..xx', 'xxxx.xx', 'xxx..xx', 'xx...xx', 'x....xx'],
-  reset: ['.x.xxx..', 'xx....x.', 'xxx....x', '.......x', 'x......x', 'x......x', '.x....x.', '..xxxx..'],
-  gear: ['...xx...', '.x.xx.x.', '..xxxx..', 'xxx..xxx', 'xxx..xxx', '..xxxx..', '.x.xx.x.', '...xx...'],
-  close: ['x.....x', '.x...x.', '..x.x..', '...x...', '..x.x..', '.x...x.', 'x.....x'],
-  more: ['.......', '.......', '.......', 'x..x..x', '.......', '.......', '.......'],
-};
 
 export const CAFE: CafeItem[] = [
   {

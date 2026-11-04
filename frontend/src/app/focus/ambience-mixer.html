@@ -1,0 +1,55 @@
+<section class="card" aria-labelledby="mixer-title">
+  <h2 class="card-title" id="mixer-title">
+    Sound
+    <button class="btn btn-sm" [class.btn-primary]="ambience.playing()" [attr.aria-pressed]="ambience.playing()" (click)="ambience.toggle()">
+      <app-icon [name]="ambience.playing() ? 'pause' : 'play'" style="--icon: 13px" />
+      {{ ambience.playing() ? 'Stop' : 'Play' }}
+    </button>
+  </h2>
+
+  <div class="layers">
+    @for (layer of layers; track layer.id) {
+      <div class="layer">
+        <span class="layer-name">{{ layer.label }}</span>
+        <input
+          class="range"
+          type="range"
+          min="0"
+          max="1"
+          step="0.05"
+          [value]="ambience.volumes()[layer.id]"
+          [style.--val]="ambience.volumes()[layer.id]"
+          [attr.aria-label]="layer.label + ' volume'"
+          (input)="ambience.setVolume(layer.id, volume($event))"
+        />
+      </div>
+    }
+    <div class="layer">
+      <label class="layer-name file-pick" [title]="ambience.track() ?? 'Load an audio file'">
+        {{ ambience.track() ?? 'Your file' }}
+        <input class="sr-only" type="file" accept="audio/*" (change)="pickTrack($event)" />
+      </label>
+      <input
+        class="range"
+        type="range"
+        min="0"
+        max="1"
+        step="0.05"
+        [value]="ambience.volumes()['custom']"
+        [style.--val]="ambience.volumes()['custom']"
+        [disabled]="!ambience.track()"
+        aria-label="Your audio volume"
+        (input)="ambience.setVolume('custom', volume($event))"
+      />
+    </div>
+  </div>
+
+  <h3 class="sub" id="tick-title">Ticking</h3>
+  <div class="segmented" role="radiogroup" aria-labelledby="tick-title" [style.--n]="ticks.length" [style.--i]="tickIndex()">
+    @for (t of ticks; track t.id) {
+      <button role="radio" [attr.aria-checked]="brew.settings().tick === t.id" (click)="chooseTick(t.id)">
+        {{ t.label }}
+      </button>
+    }
+  </div>
+</section>

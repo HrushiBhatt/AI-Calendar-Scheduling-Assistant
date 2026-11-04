@@ -41,7 +41,8 @@ The live demo is in scope, but it's a demo. It must never collect passwords or s
 | `backend/internal/auth` | bcrypt, sessions, OAuth sign-in, state, CSRF |
 | `backend/internal/store` | GORM models, sealed tokens, SQLite setup |
 | `backend/internal/api` | Gin handlers, `hardening.go` middleware |
-| `frontend/src/app` | Angular: `core` services, `brew`, `plan`, `progress`, `dialogs`, `login` |
+| `frontend/src/app` | Angular: `core` services, `home`, `calendar` (grids, assistant bar, plan screen), `focus`, `tasks`, `progress`, `dialogs`, `login` |
+| `frontend/src/assets/background` | The background photograph: the 4K original and a 1920 px copy |
 | `frontend/src/app/core/local` | The live demo's in-browser backend and sample data. Only the `pages` build bundles it |
 | `frontend/e2e` | Playwright browser tests against the Go server |
 | `frontend/e2e-pages` | Playwright browser tests against the static demo, served as Pages serves it |
@@ -99,6 +100,14 @@ A change that breaks one of these is wrong even if everything else works.
 | `style-src 'unsafe-inline'`, and a `wasm-unsafe-eval` in `index.pages.html` | Angular writes styles inline, and that one keyword lets the demo run the WebAssembly scheduler. Neither allows injected scripts |
 | The Google buttons are white and ignore the pixel theme | Google's branding rules set their colors, spacing and logo. Don't restyle them |
 | Google sign-in doesn't connect the calendar | They're separate consents, so someone can use the app without giving it their calendar |
+| `.content` only has a `view-transition-name` while `html[data-nav]` is set | A named element can't blur what's behind it, so a permanent name turns all the glass flat. Don't fade a card's parent for the same reason: fade the card's contents |
+| The assistant bar is missing from the Focus page | The timer stays free of distractions. Everywhere else it sits under the tab bar |
+| A small script, `public/theme-init.js`, loads ahead of the app | It sets the theme before the first paint, so a light page never flashes dark. The policy allows no inline scripts, so it's a file. Keep its key and colors in step with `core/theme.ts` |
+| The mug and the Google buttons keep fixed colors in both themes | The mug is pixel art, and Google's branding rules set its buttons. Every other color is a token: add new ones to both theme blocks in `styles.css` |
+| Glass opacity and text colors look arbitrary | They were calculated against the photograph's darkest and brightest regions to keep 4.5:1 contrast. Recheck them if the glass or the photo changes |
+| The pixel font and pixel art appear only on the mug, clock, wordmark and café | Everything else uses Outfit, because pixel text is hard to read in a dense calendar |
+| Week columns use wall-clock time, while the day view uses elapsed time | A week needs one axis for seven days. The day view stays exact across clock changes |
+| The schedule route allows 43 days, not 42 | A six-week month grid across the autumn clock change is an hour longer than 42 days |
 | The Google buttons, and a note about Claude, show even without keys | They say what's missing. They used to disappear, which made a misplaced `.env` look like missing features |
 | The Trivy action isn't used | Its installer depends on `get.trivy.dev`, which stopped resolving |
 | `dummyHash` work on failed logins | Equal timing hides which emails exist |
@@ -107,7 +116,7 @@ A change that breaks one of these is wrong even if everything else works.
 
 ## Working agreement
 
-- **Work directly on `main`.** The owner is the only person on this repo and asked for no new branches. Check out `main`, pull, commit there and push once it's verified. A push to `main` deploys the live site, so run the checks first.
+- **Never push or create branches.** The owner asked for this: make changes locally on `main`, leave them uncommitted unless asked to commit, and say what's ready. The owner pushes when they're done, and a push to `main` deploys the live site.
 - **Update `CHANGELOG.md` with every change,** and say why, not only what.
 - **Keep this file's status report current,** and ARCHITECTURE.md if a decision changes.
 - **Report only measured numbers.** Benchmarks, coverage, test counts and eval results must come from a real run, with the hardware named where it matters. If something wasn't run, say so. "Not measured yet" is an acceptable entry, and an invented number isn't.

@@ -55,14 +55,14 @@ export class Countdown {
     await this.act(async (p) => {
       const later = new Date(Date.parse(p.starts_at) + 10 * 60_000).toISOString();
       await this.api.moveBlock(p.scheduled_id, later);
-      this.toasts.show('Pushed back 10 minutes.');
+      this.toasts.show('Pushed back 10 minutes');
     });
   }
 
   async skip(): Promise<void> {
     await this.act(async (p) => {
       await this.api.dropBlock(p.scheduled_id);
-      this.toasts.show('Skipped this block.');
+      this.toasts.show('Block skipped');
     });
   }
 

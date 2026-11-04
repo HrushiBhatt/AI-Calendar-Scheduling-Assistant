@@ -4,25 +4,25 @@ import { Brew } from '../core/brew';
 import { Toasts } from '../core/toast';
 
 const OUTCOMES: Record<string, string> = {
-  connected: 'Calendar connected. Your meetings are on the timeline.',
-  denied: 'Calendar access was not granted.',
-  expired: 'That sign-in took too long or came from another session. Try connecting again.',
-  error: "Couldn't connect the calendar. Try again in a moment.",
+  connected: 'Calendar connected',
+  denied: 'Calendar access not granted',
+  expired: 'That took too long. Try again.',
+  error: "Couldn't connect the calendar",
 };
 
 const GOOGLE_OUTCOMES: Record<string, string> = {
-  linked: 'Google sign-in is on. You can use it next time you sign in.',
-  denied: 'Google sign-in was not added.',
-  expired: 'That took too long or came from another session. Try again.',
-  in_use: 'That Google account already belongs to another Brew Focus account.',
-  already_linked: 'Another Google account is already connected. Remove it first.',
-  unverified: "Google hasn't verified that account's email address yet.",
-  failed: "Couldn't connect Google. Try again in a moment.",
+  linked: 'Google sign-in on',
+  denied: 'Google sign-in not added',
+  expired: 'That took too long. Try again.',
+  in_use: 'That Google account is already in use',
+  already_linked: 'Remove the connected Google account first',
+  unverified: "Google hasn't verified that email",
+  failed: "Couldn't connect Google",
 };
 
 /**
- * /settings: where the calendar and Google sign-in OAuth flows land. Settings is a dialog, not a page, so
- * this opens it, reports how the connection went and moves on to a real page.
+ * /settings: where the calendar and Google sign-in OAuth flows land. Settings is a panel, not a page, so
+ * this reports how the connection went, opens the panel if something needs a second look, and moves on.
  */
 @Component({
   selector: 'app-settings-route',
@@ -37,7 +37,11 @@ export class SettingsRoute {
     const google = query.get('google') ?? '';
     if (OUTCOMES[outcome]) toasts.show(OUTCOMES[outcome]);
     if (GOOGLE_OUTCOMES[google]) toasts.show(GOOGLE_OUTCOMES[google]);
-    if (outcome !== 'connected') inject(Brew).dialog.set('settings');
-    void inject(Router).navigate([outcome === 'connected' ? '/plan' : '/'], { replaceUrl: true });
+    if (outcome !== 'connected') {
+      const brew = inject(Brew);
+      brew.settingsTab.set(outcome ? 'calendar' : 'account');
+      brew.dialog.set('settings');
+    }
+    void inject(Router).navigate([outcome ? '/calendar' : '/'], { replaceUrl: true });
   }
 }

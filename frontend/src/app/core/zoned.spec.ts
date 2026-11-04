@@ -1,4 +1,4 @@
-import { dayIn, formatDay, shiftDay, wallTime, zonedInstant } from './zoned';
+import { dayIn, firstDayOfWeek, formatDay, monthGrid, shiftDay, shiftMonth, wallTime, weekOf, weekdayOf, zonedInstant } from './zoned';
 
 const NY = 'America/New_York';
 const iso = (t: number) => new Date(t).toISOString();
@@ -30,5 +30,46 @@ describe('zoned time', () => {
     expect(shiftDay('2026-12-31', 1)).toBe('2027-01-01');
     expect(shiftDay('2026-03-01', -1)).toBe('2026-02-28');
     expect(formatDay('2026-10-26')).toContain('26');
+  });
+});
+
+describe('calendar ranges', () => {
+  it('finds the week around a day, whichever day starts it', () => {
+    expect(weekdayOf('2026-11-04')).toBe(3); // a Wednesday
+    expect(weekOf('2026-11-04', 0)[0]).toBe('2026-11-01');
+    expect(weekOf('2026-11-04', 1)[0]).toBe('2026-11-02');
+    expect(weekOf('2026-11-01', 1)[0]).toBe('2026-10-26'); // Sunday is the end of a Monday week
+    expect(weekOf('2026-11-04', 0).length).toBe(7);
+  });
+
+  it('builds a month grid of whole weeks', () => {
+    const nov = monthGrid('2026-11-17', 0); // Nov 1 2026 is a Sunday
+    expect(nov[0]).toBe('2026-11-01');
+    expect(nov.length).toBe(35);
+    expect(nov.at(-1)).toBe('2026-12-05');
+    const may = monthGrid('2027-05-10', 0); // starts on a Saturday, so it needs six rows
+    expect(may.length).toBe(42);
+    expect(may[0]).toBe('2027-04-25');
+    expect(monthGrid('2026-02-01', 0).length).toBe(28); // February can fit exactly
+  });
+
+  it('never asks the server for more than six weeks', () => {
+    for (let m = 1; m <= 12; m++) {
+      for (const first of [0, 1, 6]) {
+        expect(monthGrid(`2027-${String(m).padStart(2, '0')}-15`, first).length).toBeLessThanOrEqual(42);
+      }
+    }
+  });
+
+  it('steps months, landing on the last day of a shorter one', () => {
+    expect(shiftMonth('2026-01-31', 1)).toBe('2026-02-28');
+    expect(shiftMonth('2026-12-15', 1)).toBe('2027-01-15');
+    expect(shiftMonth('2026-01-15', -1)).toBe('2025-12-15');
+  });
+
+  it('reads the first day of the week from the locale', () => {
+    expect(firstDayOfWeek('en-US')).toBe(0);
+    expect(firstDayOfWeek('en-GB')).toBe(1);
+    expect(firstDayOfWeek('not a locale')).toBe(0);
   });
 });

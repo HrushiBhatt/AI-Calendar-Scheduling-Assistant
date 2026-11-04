@@ -12,62 +12,44 @@ import { GoogleLogo } from '../shared/google-logo';
   imports: [ReactiveFormsModule, GoogleLogo],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="group" aria-labelledby="set-security">
-      <h3 id="set-security">Account security</h3>
-
+    <section class="group" aria-label="Account security">
       <form class="pw" [formGroup]="form" (ngSubmit)="savePassword()">
         @if (auth.user()?.has_password) {
           <label class="field">
             Current password
-            <input class="input px" type="password" formControlName="current" autocomplete="current-password" />
+            <input class="input" type="password" formControlName="current" autocomplete="current-password" />
           </label>
-        } @else {
-          <p class="setting-hint">You sign in with Google. Add a password to have a second way in.</p>
         }
         <label class="field">
           New password
-          <input class="input px" type="password" formControlName="next" autocomplete="new-password" />
+          <input class="input" type="password" formControlName="next" autocomplete="new-password" placeholder="12+ characters" />
         </label>
-        <p class="setting-hint">At least 12 characters. A few unrelated words work well.</p>
         @if (error()) {
           <p class="err" role="alert">{{ error() }}</p>
         }
-        <button class="btn btn-sm px" [disabled]="busy()">
+        <button class="btn btn-sm" [disabled]="busy()">
           {{ auth.user()?.has_password ? 'Change password' : 'Set password' }}
         </button>
       </form>
 
       @if ((providers.hasValue() && providers.value().google) || auth.user()?.google_linked) {
         <div class="line">
-          <span class="setting-hint">
-            {{ auth.user()?.google_linked ? 'Google sign-in is on.' : 'Sign in with your Google account as well.' }}
-          </span>
           @if (auth.user()?.google_linked) {
-            <button class="btn btn-sm px" (click)="unlink()" [disabled]="busy()">Remove Google sign-in</button>
+            <span>Google sign-in on</span>
+            <button class="btn btn-sm" (click)="unlink()" [disabled]="busy()" aria-label="Remove Google sign-in">Remove</button>
           } @else {
             <a class="gbtn" href="/api/auth/google/link"><app-google-logo />Connect Google sign-in</a>
           }
         </div>
       }
 
-      <div class="line">
-        <span class="setting-hint">Lost a device? This ends every session, including this one.</span>
-        <button class="btn btn-sm btn-danger px" (click)="signOutEverywhere()" [disabled]="busy()">Sign out everywhere</button>
-      </div>
+      <button class="btn btn-sm btn-danger everywhere" (click)="signOutEverywhere()" [disabled]="busy()">Sign out everywhere</button>
     </section>
   `,
   styles: `
     .group {
       display: grid;
-      gap: 14px;
-      padding-bottom: 18px;
-      border-bottom: 2px dashed var(--gray-700);
-    }
-    h3 {
-      font-family: var(--font-pixel);
-      font-size: 0.55rem;
-      color: var(--accent);
-      text-transform: uppercase;
+      gap: 16px;
     }
     .pw {
       display: grid;
@@ -82,10 +64,14 @@ import { GoogleLogo } from '../shared/google-logo';
       align-items: center;
       justify-content: space-between;
       gap: 8px 14px;
+      font-size: 0.875rem;
+    }
+    .everywhere {
+      justify-self: start;
     }
     .err {
       font-size: 0.8rem;
-      color: var(--danger, #e57373);
+      color: var(--danger);
     }
   `,
 })
@@ -106,14 +92,14 @@ export class AccountSecurity {
   protected async savePassword(): Promise<void> {
     const { current, next } = this.form.getRawValue();
     if (!next) {
-      this.error.set('Enter a new password.');
+      this.error.set('Enter a new password');
       return;
     }
     await this.run(async () => {
       await this.api.changePassword(current, next);
       this.form.reset();
       await this.auth.restore();
-      this.toasts.show('Password saved. Other devices have been signed out.');
+      this.toasts.show('Password saved. Other devices signed out.');
     });
   }
 
@@ -121,7 +107,7 @@ export class AccountSecurity {
     await this.run(async () => {
       await this.api.unlinkGoogle();
       await this.auth.restore();
-      this.toasts.show('Google sign-in removed.');
+      this.toasts.show('Google sign-in removed');
     });
   }
 

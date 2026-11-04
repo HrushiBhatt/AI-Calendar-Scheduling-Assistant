@@ -5,21 +5,22 @@ import { Api, errorMessage } from '../core/api';
 import { Auth } from '../core/auth';
 import { GoogleLogo } from '../shared/google-logo';
 import { PixelMug } from '../shared/pixel-mug';
+import { ThemeToggle } from '../shared/theme-toggle';
 
 /** Why the server sent the browser back here from Google, by the code in ?error=. */
 const SIGN_IN_ERRORS: Record<string, string> = {
-  denied: 'Google sign-in was cancelled.',
-  expired: 'That sign-in took too long or came from another window. Please try again.',
-  failed: "Couldn't sign in with Google. Try again in a moment.",
-  unverified: "Google hasn't verified that account's email address yet.",
-  account_exists: 'That email already has an account. Log in with your password, then add Google in Settings.',
+  denied: 'Google sign-in cancelled',
+  expired: 'That took too long. Try again.',
+  failed: "Couldn't sign in with Google",
+  unverified: "Google hasn't verified that email",
+  account_exists: 'That email has an account. Log in with your password, then add Google in Settings.',
 };
 
 const MIN_NEW_PASSWORD = 12;
 
 @Component({
   selector: 'app-login-page',
-  imports: [ReactiveFormsModule, PixelMug, GoogleLogo],
+  imports: [ReactiveFormsModule, PixelMug, GoogleLogo, ThemeToggle],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login-page.html',
   styleUrl: './login-page.css',
@@ -56,8 +57,8 @@ export class LoginPage {
       this.form.markAllAsTouched();
       this.error.set(
         registering
-          ? `Enter a valid email and a password of at least ${MIN_NEW_PASSWORD} characters.`
-          : 'Enter your email and password.',
+          ? `Valid email, ${MIN_NEW_PASSWORD}+ character password`
+          : 'Enter your email and password',
       );
       return;
     }

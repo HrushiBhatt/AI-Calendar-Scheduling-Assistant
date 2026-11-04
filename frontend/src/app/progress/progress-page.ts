@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, resource } from '@angular/core';
 import { Api } from '../core/api';
 import { Brew } from '../core/brew';
+import { Icon } from '../shared/icon';
 import { MinutesPipe, PluralPipe } from '../shared/pipes';
 import { CafeShelf } from './cafe-shelf';
 import { Heatmap } from './heatmap';
@@ -9,7 +10,7 @@ import { PlanningInsights } from './planning-insights';
 
 @Component({
   selector: 'app-progress-page',
-  imports: [Heatmap, CafeShelf, PlanningInsights, DatePipe, MinutesPipe, PluralPipe],
+  imports: [Heatmap, CafeShelf, Icon, PlanningInsights, DatePipe, MinutesPipe, PluralPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './progress-page.html',
   styleUrl: './progress-page.css',
@@ -24,12 +25,14 @@ export class ProgressPage {
     params: () => this.stats(),
     loader: () => this.api.sessions(),
   });
+  protected readonly journalValue = computed(() => (this.journal.hasValue() ? this.journal.value() : null));
 
   /** Planning numbers, refreshed alongside the stats. */
   protected readonly insights = resource({
     params: () => this.stats(),
     loader: () => this.api.insights(),
   });
+  protected readonly insightsValue = computed(() => (this.insights.hasValue() ? this.insights.value() : null));
 
   private readonly taskTitles = computed(() => new Map(this.brew.tasks().map((t) => [t.id, t.title])));
 

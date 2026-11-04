@@ -1,12 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { CAFE } from '../core/sprites';
-import { PluralPipe } from '../shared/pipes';
 import { Sprite } from '../shared/sprite';
 
 /** Every full brew furnishes a cozy pixel café. Locked items show as silhouettes. */
 @Component({
   selector: 'app-cafe-shelf',
-  imports: [Sprite, PluralPipe],
+  imports: [Sprite],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ul class="shelf">
@@ -17,19 +16,19 @@ import { Sprite } from '../shared/sprite';
             class="sprite"
             [rows]="item.rows"
             [palette]="item.palette"
-            [fill]="unlocked ? undefined : '#242424'"
-            [title]="unlocked ? item.name : 'Locked: ' + item.at + ' full brews'"
+            [fill]="unlocked ? undefined : 'var(--locked)'"
+            [title]="unlocked ? item.name : item.at + ' full sessions'"
           />
-          <span class="name">{{ unlocked ? item.name : (item.at | plural: 'brew') }}</span>
+          <span class="name">{{ unlocked ? item.name : item.at }}</span>
         </li>
       }
     </ul>
     <div class="next">
       <p>
         @if (next(); as item) {
-          {{ item.at - completed() | plural: 'more full brew' }} to unlock the {{ item.name }}.
+          {{ item.at - completed() }} more for the {{ item.name }}
         } @else {
-          Your café is fully furnished. ☕
+          Fully furnished
         }
       </p>
       <div class="meter"><span [style.width.%]="progress() * 100"></span></div>

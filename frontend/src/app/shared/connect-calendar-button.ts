@@ -12,7 +12,7 @@ import { GoogleLogo } from './google-logo';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (calendars.info()?.configured && calendars.info()?.provider !== 'google') {
-      <button class="btn btn-primary px" (click)="calendars.connect()" [disabled]="calendars.busy()">Connect a test calendar</button>
+      <button class="btn btn-primary" (click)="calendars.connect()" [disabled]="calendars.busy()">Connect a test calendar</button>
     } @else {
       <button class="gbtn" (click)="calendars.connect()" [disabled]="!calendars.info()?.configured || calendars.busy()">
         <app-google-logo />

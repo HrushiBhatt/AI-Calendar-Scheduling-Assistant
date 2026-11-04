@@ -24,7 +24,7 @@ const level = (min: number) => (min <= 0 ? 0 : min < 25 ? 1 : min < 60 ? 2 : min
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="scroll" #scroll>
-      <svg [attr.width]="width" [attr.height]="height" role="img" [attr.aria-label]="summary()">
+      <svg [attr.viewBox]="'0 0 ' + width + ' ' + height" role="img" [attr.aria-label]="summary()">
         @for (m of grid().months; track m.col) {
           <text [attr.x]="left + m.col * step" y="10">{{ m.label }}</text>
         }
@@ -32,7 +32,7 @@ const level = (min: number) => (min <= 0 ? 0 : min < 25 ? 1 : min < 60 ? 2 : min
           <text x="0" [attr.y]="top + d.row * step + cell - 2">{{ d.label }}</text>
         }
         @for (c of grid().cells; track c.key) {
-          <rect [attr.class]="'heat-' + c.level" [attr.x]="left + c.col * step" [attr.y]="top + c.row * step" [attr.width]="cell" [attr.height]="cell">
+          <rect [attr.class]="'heat-' + c.level" [style.--col]="c.col" [attr.x]="left + c.col * step" [attr.y]="top + c.row * step" [attr.width]="cell" [attr.height]="cell">
             <title>{{ c.label }}</title>
           </rect>
         }

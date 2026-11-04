@@ -31,6 +31,7 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 export type Dialog = 'intention' | 'breathe' | 'reflect' | 'settings' | null;
+export type SettingsTab = 'general' | 'planning' | 'calendar' | 'account';
 type Resource = 'presets' | 'tasks' | 'sessions' | 'settings' | 'schedule' | 'account';
 
 /**
@@ -60,6 +61,7 @@ export class Brew {
 
   // ---- flow ----------------------------------------------------------------------------
   readonly dialog = signal<Dialog>(null);
+  readonly settingsTab = signal<SettingsTab>('general');
   readonly reflecting = signal<Completed | null>(null);
   /** A break is due but auto-start is off, so it waits for the play button. */
   readonly pendingBreak = signal(false);
@@ -146,7 +148,7 @@ export class Brew {
         void this.refresh('tasks');
         break;
       case 'session.discarded':
-        this.toasts.show('Under a minute, so not logged.');
+        this.toasts.show('Under a minute, not logged');
         break;
       case 'break.completed':
         if (e.data.completed) this.announce('break', 'Break over. Ready for another brew?');
@@ -254,7 +256,7 @@ export class Brew {
     const preset = await this.api.createPreset({ name, focus, rest }); // errors go back to the form
     this.presets.update((list) => (list.some((p) => p.id === preset.id) ? list : [...list, preset]));
     this.modeKey.set(fromPreset(preset).key);
-    this.toasts.show(`Saved “${preset.name}”`);
+    this.toasts.show(`Saved ${preset.name}`);
   }
 
   async deleteMode(mode: Mode): Promise<void> {
@@ -311,7 +313,7 @@ export class Brew {
     const user = this.auth.user();
     if (!user) return;
     if (patch.notify && !user.settings.notify && !(await this.allowNotifications())) {
-      this.toasts.show('Notifications are blocked for this site in your browser.');
+      this.toasts.show('Notifications are blocked in your browser');
       return;
     }
     this.auth.user.set({ ...user, settings: { ...user.settings, ...patch } }); // optimistic
@@ -324,11 +326,11 @@ export class Brew {
   }
 
   async clearData(): Promise<void> {
-    if (!confirm('Delete every logged session? Tasks and custom modes are kept.')) return;
+    if (!confirm('Delete every session? Tasks and modes stay.')) return;
     await this.attempt(async () => {
       await this.api.clearSessions();
       await Promise.all([this.refresh('sessions'), this.refresh('tasks')]);
-      this.toasts.show('All sessions deleted.');
+      this.toasts.show('Sessions deleted');
     });
   }
 
@@ -373,7 +375,7 @@ export class Brew {
           this.distractions += 1;
           this.control('distraction');
         } else {
-          this.toasts.show(`Welcome back. Distraction #${this.distractions} logged.`);
+          this.toasts.show(`Distraction #${this.distractions} logged`);
         }
       };
       const onLeave = (e: BeforeUnloadEvent) => e.preventDefault(); // "Leave site?"

@@ -9,11 +9,11 @@ import { Toasts } from './toast';
 const STALE: LiveEvent['type'][] = ['plan.proposed', 'plan.accepted', 'plan.conflict'];
 
 export const UNPLACED_TEXT: Record<UnplacedReason, string> = {
-  no_gap_long_enough: 'no free gap is long enough',
-  day_cap_reached: 'your daily cap is already reached',
-  due_date_passed: 'its due date has passed',
-  no_slot_before_due: 'no free slot comes before it is due',
-  total_blocks_reached: 'the plan reached the number of blocks you asked for',
+  no_gap_long_enough: 'no gap long enough',
+  day_cap_reached: 'daily limit reached',
+  due_date_passed: 'due date passed',
+  no_slot_before_due: 'no time before it’s due',
+  total_blocks_reached: 'plan is full',
 };
 
 /**
@@ -32,10 +32,16 @@ export class Assistant {
     params: () => this.auth.user()?.id,
     loader: () => this.api.livePlans(),
   });
-  readonly proposal = computed(() => this.live.value()?.find((p) => p.source !== 'conflict') ?? null);
-  readonly conflict = computed(() => this.live.value()?.find((p) => p.source === 'conflict') ?? null);
+  // A failed request's value throws when read, and the calendar reads these on every render.
+  private readonly plans = computed(() => (this.live.hasValue() ? this.live.value() : []));
+  readonly proposal = computed(() => this.plans().find((p) => p.source !== 'conflict') ?? null);
+  readonly conflict = computed(() => this.plans().find((p) => p.source === 'conflict') ?? null);
 
   readonly pending = signal(false);
+  /** The words behind the current request, shown while the plan is being made. */
+  readonly asked = signal('');
+  /** What the model said when it didn't make a plan (the request wasn't about planning). */
+  readonly reply = signal('');
   /** The last response's extras, which belong to that request rather than to the plan. */
   readonly last = signal<Pick<PlanResponse, 'degraded' | 'notice' | 'usage'> | null>(null);
   /** Whether this server has a model at all: an Anthropic key, or the demo's phrase matcher. */
@@ -47,7 +53,7 @@ export class Assistant {
       if (STALE.includes(e.type) || (e.type === 'changed' && e.data.kind === 'schedule')) this.refresh();
       if (e.type === 'plan.conflict') {
         const n = e.data.block_ids.length;
-        this.toasts.show(`A meeting moved onto ${n === 1 ? 'a planned block' : n + ' planned blocks'}. A replacement is waiting on the Plan page.`);
+        this.toasts.show(`A meeting moved onto ${n === 1 ? 'a block' : n + ' blocks'}. Replacement ready.`);
       }
     });
     inject(DestroyRef).onDestroy(() => sub.unsubscribe());
@@ -62,7 +68,7 @@ export class Assistant {
     const picked = plan.blocks.filter((b) => !excluded.has(b.id)).map((b) => b.id);
     return this.decide(async () => {
       await this.api.acceptPlan(plan.id, picked.length === plan.blocks.length ? undefined : picked);
-      this.toasts.show(picked.length === 1 ? 'Block scheduled.' : `${picked.length} blocks scheduled.`);
+      this.toasts.show(picked.length === 1 ? 'Block scheduled' : `${picked.length} blocks scheduled`);
     });
   }
 
@@ -92,6 +98,10 @@ export class Assistant {
     try {
       const res = await this.api.requestPlan(req);
       this.last.set({ degraded: res.degraded, notice: res.notice, usage: res.usage });
+      // Show the new plan now, so the plan screen never passes through "nothing to review" on
+      // its way there. It replaced any earlier proposal; a conflict's replacement stays open.
+      const plan = res.plan;
+      if (plan) this.live.set([...this.plans().filter((p) => p.source === 'conflict'), plan]);
       this.refresh();
       return res;
     } catch (err) {

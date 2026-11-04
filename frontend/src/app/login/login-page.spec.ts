@@ -44,7 +44,7 @@ describe('LoginPage', () => {
     expect(link.getAttribute('href')).toBe('/api/auth/google/start');
     expect(link.textContent).toContain('Sign in with Google');
     expect(link.querySelector('app-google-logo svg')).not.toBeNull();
-    expect(el.textContent).not.toContain("isn't set up");
+    expect(el.textContent).not.toContain('Not set up');
   });
 
   it("names the action on the sign-up tab", async () => {
@@ -60,13 +60,13 @@ describe('LoginPage', () => {
     const button = el.querySelector<HTMLButtonElement>('button.google-off')!;
     expect(button.disabled).toBe(true);
     expect(button.querySelector('app-google-logo svg')).not.toBeNull();
-    expect(el.textContent).toContain("Google sign-in isn't set up on this server");
+    expect(el.textContent).toContain('Not set up yet');
   });
 
   it('keeps the page working when the server can\'t be reached', async () => {
     const { el } = await open({}, 'unreachable');
     expect(el.querySelector<HTMLButtonElement>('button.google-off')?.disabled).toBe(true);
-    expect(el.textContent).toContain("Couldn't reach the server");
+    expect(el.textContent).toContain("Can't reach the server");
     expect(el.querySelector('input[type=email]')).not.toBeNull();
   });
 
@@ -96,6 +96,6 @@ describe('LoginPage', () => {
     fill('input[type=password]', 'too short');
     await submit();
     http.expectNone('/api/auth/register');
-    expect(el.querySelector('[role=alert]')?.textContent).toContain('at least 12');
+    expect(el.querySelector('[role=alert]')?.textContent).toContain('12+');
   });
 });
