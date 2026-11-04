@@ -29,13 +29,20 @@ const EXAMPLES = [
   template: `
     <section class="panel px" aria-labelledby="compose-title">
       <h2 class="panel-title" id="compose-title">
-        Plan focus time
+        {{ claude() ? 'Plan with Claude' : 'Plan focus time' }}
         @if (assistant.enabled()) {
           <button type="button" class="switch-mode" (click)="useForm.set(!useForm())">
             {{ useForm() ? 'Type it instead' : 'Use the form' }}
           </button>
         }
       </h2>
+
+      @if (!browserOnly && !assistant.available()) {
+        <p class="setup">
+          <b>Claude isn't set up on this server yet.</b> Add ANTHROPIC_API_KEY to .env and restart the server (see the README). This form
+          plans the same way in the meantime.
+        </p>
+      }
 
       @if (assistant.enabled() && !useForm()) {
         <form class="stack" (submit)="$event.preventDefault(); sendText()">
@@ -52,18 +59,18 @@ const EXAMPLES = [
             (keydown.control.enter)="sendText()"
           ></textarea>
           @if (reply(); as r) {
-            <p class="reply" role="status"><span class="label">Assistant</span> {{ r }}</p>
+            <p class="reply" role="status"><span class="label">{{ browserOnly ? 'Assistant' : 'Claude' }}</span> {{ r }}</p>
           }
           <p class="hint">
             @if (browserOnly) {
               A simple phrase matcher reads your request in this demo, with no AI model. Try "three blocks tomorrow". The real
               scheduler picks every time, around the sample meetings.
             } @else {
-              The assistant only reads your request. The scheduler picks every time, around your real meetings.
+              Claude only reads your request. It never picks a time: the scheduler does that, around your meetings.
             }
           </p>
           <button class="btn btn-primary px" [disabled]="assistant.pending() || !text().trim()">
-            {{ assistant.pending() ? 'Planning…' : 'Plan it' }}
+            {{ assistant.pending() ? 'Planning…' : browserOnly ? 'Plan it' : 'Plan with Claude' }}
           </button>
         </form>
       } @else {
@@ -137,6 +144,11 @@ const EXAMPLES = [
       font-size: 0.72rem;
       color: var(--gray-500);
     }
+    .setup {
+      margin-bottom: 14px;
+      font-size: 0.78rem;
+      color: var(--gray-400);
+    }
     .pair {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -184,6 +196,8 @@ export class PlanComposer {
   protected readonly assistant = inject(Assistant);
   protected readonly browserOnly = environment.browserBackend;
   protected readonly brew = inject(Brew);
+  /** The demo's phrase matcher isn't Claude, so only the full app says it is. */
+  protected readonly claude = computed(() => !this.browserOnly && this.assistant.enabled());
   readonly planned = output<PlanResponse>();
 
   protected readonly windows = WINDOWS;

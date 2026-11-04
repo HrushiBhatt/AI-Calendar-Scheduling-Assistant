@@ -7,6 +7,7 @@ import { PlanResponse, PlanView, ScheduledBlock } from '../core/models';
 import { Schedule } from '../core/schedule';
 import { Toasts } from '../core/toast';
 import { dayIn, formatDay } from '../core/zoned';
+import { CalendarCard } from './calendar-card';
 import { BlockMove, DayTimeline } from './day-timeline';
 import { PlanComposer } from './plan-composer';
 import { PlanReview } from './plan-review';
@@ -18,10 +19,11 @@ import { PlanReview } from './plan-review';
  */
 @Component({
   selector: 'app-plan-page',
-  imports: [DayTimeline, PlanComposer, PlanReview],
+  imports: [CalendarCard, DayTimeline, PlanComposer, PlanReview],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="side">
+      <app-calendar-card />
       <app-plan-composer (planned)="onPlanned($event)" />
       @if (assistant.conflict(); as c) {
         <app-plan-review

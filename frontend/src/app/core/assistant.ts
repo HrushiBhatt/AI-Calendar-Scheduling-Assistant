@@ -38,7 +38,9 @@ export class Assistant {
   readonly pending = signal(false);
   /** The last response's extras, which belong to that request rather than to the plan. */
   readonly last = signal<Pick<PlanResponse, 'degraded' | 'notice' | 'usage'> | null>(null);
-  readonly enabled = computed(() => this.auth.user()?.settings.assistantEnabled ?? true);
+  /** Whether this server has a model at all: an Anthropic key, or the demo's phrase matcher. */
+  readonly available = computed(() => this.auth.user()?.assistant_available ?? false);
+  readonly enabled = computed(() => this.available() && (this.auth.user()?.settings.assistantEnabled ?? true));
 
   constructor() {
     const sub = inject(LiveEvents).events$.subscribe((e) => {

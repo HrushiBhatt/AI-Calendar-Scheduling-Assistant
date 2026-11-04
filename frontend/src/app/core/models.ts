@@ -30,6 +30,7 @@ export interface User {
   settings: Settings;
   has_password: boolean;
   google_linked: boolean;
+  assistant_available: boolean;
 }
 
 export interface Preset {

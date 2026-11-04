@@ -9,6 +9,24 @@
       <button class="seg px" role="tab" [attr.aria-selected]="mode() === 'register'" (click)="switchTo('register')">Sign up</button>
     </div>
 
+    @if (google()) {
+      <a class="gbtn gbtn-block google" href="/api/auth/google/start">
+        <app-google-logo />
+        {{ mode() === 'login' ? 'Sign in with Google' : 'Sign up with Google' }}
+      </a>
+    } @else {
+      <button type="button" class="gbtn gbtn-block google-off" disabled>
+        <app-google-logo />
+        {{ mode() === 'login' ? 'Sign in with Google' : 'Sign up with Google' }}
+      </button>
+      @if (google() === false) {
+        <p class="setup-hint">Google sign-in isn't set up on this server yet. Add the Google keys to .env and restart the server (see the README).</p>
+      } @else if (providers.error()) {
+        <p class="setup-hint">Couldn't reach the server, so Google sign-in isn't available right now.</p>
+      }
+    }
+    <p class="or" aria-hidden="true">or use your email</p>
+
     <form class="modal-form" [formGroup]="form" (ngSubmit)="submit()">
       @if (mode() === 'register') {
         <label class="field">
@@ -39,10 +57,5 @@
         {{ busy() ? 'Brewing…' : mode() === 'login' ? 'Log in' : 'Create account' }}
       </button>
     </form>
-
-    @if (providers.value()?.google) {
-      <p class="or" aria-hidden="true">or</p>
-      <a class="btn px google" href="/api/auth/google/start">Continue with Google</a>
-    }
   </section>
 </main>

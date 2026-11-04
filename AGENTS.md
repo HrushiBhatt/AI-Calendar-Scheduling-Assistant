@@ -10,8 +10,8 @@ Context for AI agents working in this repository. Read this before changing anyt
 |---|---|
 | Timer, tasks, progress, scheduler, planning flow, dispatch, reconciliation | Built and tested |
 | Accounts, sessions, security hardening, supply-chain checks | Built and tested |
-| Google sign-in, Google Calendar | Built. Tested only against local stand-ins, never a real Google account |
-| AI assistant | Built. Tested with a scripted fake model. The eval has never run against the real model |
+| Google sign-in, Google Calendar | Built. End-to-end tests use local stand-ins. Google has accepted a real client's requests and secret, but nobody has finished a consent screen or synced a real calendar yet |
+| AI assistant | Built. One eval run against the real model: 29 of 30 prompts fully correct on `claude-haiku-5-5`. `make eval` costs real money, so ask before re-running it |
 | Live demo | https://hrushibhatt.github.io/AI-Calendar-Scheduling-Assistant/ is the browser-only demo, published to the `gh-pages` branch by the `pages` job in CI on every push to `main` |
 | Hosting the full app | **Not deployed.** The Go server runs nowhere public, and the hosting choice belongs to the owner |
 
@@ -83,7 +83,7 @@ A change that breaks one of these is wrong even if everything else works.
 - **Never link accounts by email.** Link on the provider's subject ID. See ARCHITECTURE.md for the attack this prevents.
 - **Passwords go through `auth.ValidatePassword` and bcrypt.** Don't reimplement either, and don't enforce new-password rules at sign-in, where they'd lock out older accounts.
 - **State-changing routes stay inside the `/api` group** for CSRF and cross-origin checks. `/api/calendar/push` is the one deliberate exception.
-- **Secrets stay out of git.** Use `.env`. CI fails on any secret anywhere in history, so one committed by accident means rotating it, not just deleting it.
+- **Secrets stay out of git.** Use `.env`, never `.env.example`, which git tracks. Don't read or print `.env`: it holds the owner's real keys, so check it by setting name only. CI fails on any secret anywhere in history, so one committed by accident means rotating it, not just deleting it.
 - **Pin what you add.** Actions by commit, images by digest, tools by exact version. Trivy's version and hash in `ci.yml` are updated by hand.
 - **Don't weaken a check to get CI passing.** Fix the cause, or ask.
 
@@ -97,6 +97,9 @@ A change that breaks one of these is wrong even if everything else works.
 | No server-wide `ReadTimeout` or `WriteTimeout` | Event streams stay open for hours, and a server-wide deadline would cut them off. `readBody` bounds bodies instead |
 | The app answers `/api` with no server in the Pages build | That's the live demo: `environment.pages.ts` adds an interceptor that handles those requests in the browser. Pages can't run the Go server |
 | `style-src 'unsafe-inline'`, and a `wasm-unsafe-eval` in `index.pages.html` | Angular writes styles inline, and that one keyword lets the demo run the WebAssembly scheduler. Neither allows injected scripts |
+| The Google buttons are white and ignore the pixel theme | Google's branding rules set their colors, spacing and logo. Don't restyle them |
+| Google sign-in doesn't connect the calendar | They're separate consents, so someone can use the app without giving it their calendar |
+| The Google buttons, and a note about Claude, show even without keys | They say what's missing. They used to disappear, which made a misplaced `.env` look like missing features |
 | The Trivy action isn't used | Its installer depends on `get.trivy.dev`, which stopped resolving |
 | `dummyHash` work on failed logins | Equal timing hides which emails exist |
 | Sessions are a JWT *and* a database row | The signature rejects forgeries cheaply, and the row makes them revocable |

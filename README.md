@@ -221,11 +221,12 @@ sequenceDiagram
 
 | Measure | Result |
 |---|---|
-| Backend tests | **137 tests and 441 subtests**, always under the race detector in CI |
-| Frontend tests | **51 unit tests** and **9 full browser tests**: 2 against the Go server and 7 against the static demo, served the way GitHub Pages serves it |
+| Backend tests | **139 tests and 441 subtests**, always under the race detector in CI |
+| Frontend tests | **64 unit tests** and **9 full browser tests**: 2 against the Go server and 7 against the static demo, served the way GitHub Pages serves it |
 | Scheduler | **17 golden fixtures**, including a daylight-saving day and a red-eye across midnight, plus a property test over **400 random calendars** in five time zones |
 | Scheduler speed | **About 82 µs** to plan a busy week (5 runs: 79 to 86 µs, Apple M2) |
 | Password hashing | **281 ms** per bcrypt hash at cost 12 (Apple M2) |
+| Assistant, real model | **29 of 30** prompts fully correct on `claude-haiku-5-5`, at about 5,900 tokens a request and 3.2 s typical latency ([one run](backend/internal/assistant/testdata/eval-results.md), 2026-11-04) |
 
 <img src="docs/assets/chart-coverage.svg" alt="Backend test coverage by package: events 100%, planner 97.3%, engine 92.9%, auth 88.6%, api 85.4%, assistant 81.9%, scheduler 81.6%, store 78.4%, plannerwasm 78.3%, plans 76.4%, calendar 70.9%, cmd/server 14.9%, demo 0%. Overall 78.2%." width="100%"/>
 
@@ -285,6 +286,8 @@ make web       # terminal 2: Angular on :4200, then open http://localhost:4200
 
 Sign in as **demo@brewfocus.dev** with password **brewfocus**. The demo has two weeks of meetings on an in-memory calendar, a few tasks and a month of history, so planning works with no keys at all.
 
+To use Google sign-in, your real calendar and Claude, fill in `.env` as described below, then run `make api` instead of `make demo` and open `http://localhost:4200`. Use that exact address, because it's the one Google sends you back to. At startup the server logs which features are on, and the app shows any feature that's missing its keys as disabled, with what it needs.
+
 | Command | What it does |
 |---|---|
 | `make test` | Go tests under the race detector, then the Angular unit tests |
@@ -296,7 +299,7 @@ Sign in as **demo@brewfocus.dev** with password **brewfocus**. The demo has two 
 <details>
 <summary><b>Configuration</b></summary>
 
-Copy [`.env.example`](.env.example) to `.env`, which git ignores. Every feature is optional and degrades on its own.
+Copy [`.env.example`](.env.example) to `.env`, which git ignores, and put real values only in `.env`. The app doesn't read `.env.example`, and git tracks it, so a key saved there could be published. Every feature is optional and degrades on its own.
 
 | Variable | Needed for | Notes |
 |---|---|---|
@@ -308,7 +311,8 @@ Copy [`.env.example`](.env.example) to `.env`, which git ignores. Every feature 
 | `GOOGLE_REDIRECT_URL` | Google Calendar | e.g. `http://localhost:4200/api/calendar/callback` |
 | `CALENDAR_ENC_KEY` | a connected calendar | 32 bytes as hex. `openssl rand -hex 32` |
 | `PUBLIC_URL` | push notifications | An `https://` URL Google can reach. Unset, calendars are polled every 5 minutes |
-| `ANTHROPIC_API_KEY` | the assistant | Unset, plain-language requests use the form's defaults |
+| `ANTHROPIC_API_KEY` | the assistant | Unset, the Plan page offers the form and says Claude isn't set up |
+| `ASSISTANT_DAILY_TOKENS` | a higher or lower limit | Tokens per user per day, 50,000 by default. A request averaged about 5,900 in the eval, so that's about 9 a day |
 | `DEMO` | trying it | `true` seeds the demo account. Its password is public, so don't enable it on a server holding real data |
 
 </details>
@@ -317,11 +321,10 @@ Copy [`.env.example`](.env.example) to `.env`, which git ignores. Every feature 
 <summary><b>Setting up Google sign-in and Calendar</b></summary>
 
 1. In the [Google Cloud console](https://console.cloud.google.com/), create a project and enable the **Google Calendar API**.
-2. Under **OAuth consent screen**, choose **External** and fill in the app name and your email.
-3. Add the scopes `openid`, `email`, `profile`, `.../auth/calendar.readonly` and `.../auth/calendar.app.created`.
-4. Under **Test users**, add every Google account that will connect. While the app is unverified, only test users can sign in.
-5. Under **Credentials**, create an **OAuth client ID** of type **Web application**, and add both redirect URIs from the table above.
-6. Put the client ID, secret and redirect URIs in `.env`, add `CALENDAR_ENC_KEY`, and restart.
+2. Under **Google Auth Platform**, fill in **Branding**, set **Audience** to **External**, and click **Publish app**. Don't stay in Testing: Google ends calendar access every 7 days there, so you'd have to reconnect each week. A published app that isn't verified shows a warning you click through (**Advanced**, then go to the app), and is limited to 100 new users in total.
+3. Under **Data Access**, add the scopes `openid`, `email`, `profile`, `.../auth/calendar.readonly` and `.../auth/calendar.app.created`.
+4. Under **Clients**, create a client of type **Web application**, and add both redirect URIs from the table above.
+5. Put the client ID, secret and redirect URIs in `.env`, add `CALENDAR_ENC_KEY`, and restart.
 
 </details>
 
@@ -346,8 +349,8 @@ The live demo is separate: every push to `main` rebuilds it and publishes it to 
 |---|---|
 | Timer, tasks, progress, scheduler, planning flow | ✅ Built and tested |
 | Accounts, sessions, security hardening | ✅ Built and tested |
-| Google sign-in and Google Calendar | 🟡 Built and tested against a local stand-in for Google's servers, not yet with a real Google account |
-| AI assistant | 🟡 Built and tested with a scripted fake model. The [30-request eval set](backend/internal/assistant/testdata/evals.jsonl) hasn't been run against the real model, so there are no accuracy numbers yet |
+| Google sign-in and Google Calendar | 🟡 Built and tested against a local stand-in. Google has accepted the sign-in and calendar requests from a real OAuth client, but a full sign-in and calendar sync with a real account hasn't been run yet |
+| AI assistant | ✅ Built and run against the real model: **29 of 30** prompts fully correct on `claude-haiku-5-5` in [one eval run](backend/internal/assistant/testdata/eval-results.md) on 2026-11-04 |
 | Public site | ✅ [Live demo](https://hrushibhatt.github.io/AI-Calendar-Scheduling-Assistant/) on GitHub Pages, deployed from `main` by GitHub Actions |
 | Hosting the full app | ⬜ Not deployed yet. It needs a server that runs a container and keeps a disk |
 

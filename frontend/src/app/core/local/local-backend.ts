@@ -47,7 +47,7 @@ const DAY_MS = 86_400_000;
 const WARN_MS = 60_000; // backend/internal/scheduler: Warn
 const LATE_MS = 60_000; // Late
 const TICK_MS = 30_000; // Tick
-const USER = { id: 1, email: 'demo@brewfocus.dev', name: 'Demo', has_password: false, google_linked: false };
+const USER = { id: 1, email: 'demo@brewfocus.dev', name: 'Demo', has_password: false, google_linked: false, assistant_available: true };
 const WINDOWS = ['today', 'tomorrow', 'this_week', 'next_week', 'custom'];
 const BUILTIN_MODES = [
   { name: 'Pomodoro', focus_min: 25, rest_min: 5 },

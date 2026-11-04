@@ -61,6 +61,11 @@ test('deep links and reloads work', async ({ page }) => {
 test('the real scheduler plans around the sample meetings, in WebAssembly', async ({ page }) => {
   const seen = watch(page);
   await page.goto('plan');
+
+  // Google Calendar is shown but can't be used here, and the page says so.
+  await expect(page.getByRole('button', { name: 'Connect Google Calendar' })).toBeDisabled();
+  await expect(page.locator('app-calendar-card')).toContainText('sample calendar');
+
   await page.locator('#plan-text').fill('plan three blocks next week');
   const wasm = page.waitForResponse((r) => r.url().endsWith('planner.wasm') && r.ok());
   await page.getByRole('button', { name: 'Plan it' }).click();

@@ -239,6 +239,29 @@ func TestANarrationThatInventsATimeIsDropped(t *testing.T) {
 	}
 }
 
+// The real model repeats a limit back ("nothing after 11:00"). That isn't inventing a time,
+// and treating it as one left every such request with no explanation.
+func TestANarrationMayRepeatTheUsersOwnLimits(t *testing.T) {
+	limits := map[string]any{"window": "tomorrow", "total_blocks": 1, "avoid_before": "08:30", "avoid_after": "17:00"}
+	f := setup(t, callTool(t, toolPlan, limits), say(t, "One block tomorrow, nothing before 8:30 am or after 5pm."))
+	res, err := f.a.Handle(t.Context(), f.user.ID, "one block tomorrow, between 8:30 and 5")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Plan == nil || res.Failure != "" || res.Narration == "" {
+		t.Fatalf("the limits should be allowed: %+v", res)
+	}
+
+	// A limit doesn't license any other time.
+	f = setup(t, callTool(t, toolPlan, limits), say(t, "One block tomorrow at 3:45pm, nothing after 5pm."))
+	if res, err = f.a.Handle(t.Context(), f.user.ID, "one block tomorrow, between 8:30 and 5"); err != nil {
+		t.Fatal(err)
+	}
+	if res.Narration != "" || !strings.HasPrefix(res.Failure, "narration_invented_time") {
+		t.Fatalf("an invented time got through: %+v", res)
+	}
+}
+
 func TestAProviderErrorDegradesToTheFormDefaults(t *testing.T) {
 	f := setup(t, func(anthropic.MessageNewParams) (*anthropic.Message, error) {
 		return nil, &anthropic.Error{StatusCode: 529}

@@ -21,18 +21,19 @@ test('plan, accept two of three, and see them everywhere', async ({ browser }) =
   const page = await newPage(browser);
   await signIn(page, 'register');
 
-  // Connect the fake calendar through the real OAuth routes (state cookie and all).
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('button', { name: 'Connect a test calendar' }).click();
+  // Signing in lands on the timer, which offers to connect a calendar. The fake one goes
+  // through the real OAuth routes (state cookie and all).
+  await page.locator('app-connect-prompt').getByRole('button', { name: 'Connect a test calendar' }).click();
   await expect(page).toHaveURL(/\/plan$/);
   await expect(page.getByRole('status').filter({ hasText: 'Calendar connected' })).toBeVisible();
+  await expect(page.locator('app-calendar-card')).toContainText('Test calendar connected');
 
   // Ask in plain words; the stub turns it into a plan_focus_blocks call.
   await page.locator('#plan-text').fill('plan three blocks next week');
-  await page.getByRole('button', { name: 'Plan it' }).click();
+  await page.getByRole('button', { name: 'Plan with Claude' }).click();
   const review = page.locator('app-plan-review');
   await expect(review.locator('.blocks li')).toHaveCount(3);
-  await expect(review.getByText('Assistant’s note')).toBeVisible();
+  await expect(review.getByText('Claude’s note')).toBeVisible();
 
   // Leave the third out and accept the rest.
   await review.locator('.blocks li').nth(2).getByRole('checkbox').uncheck();
@@ -66,6 +67,12 @@ test('the page runs under its security policy, and signing out ends the session'
   const csp = response?.headers()['content-security-policy'] ?? '';
   expect(csp).toContain("script-src 'self'");
   expect(response?.headers()['x-frame-options']).toBe('DENY');
+
+  // This server has no Google keys: the button still shows, and says what's missing.
+  const google = page.getByRole('button', { name: 'Sign in with Google' });
+  await expect(google).toBeDisabled();
+  await expect(google.locator('svg')).toBeVisible();
+  await expect(page.getByText("Google sign-in isn't set up on this server yet")).toBeVisible();
 
   // Styles and the self-hosted fonts really apply under the policy.
   await expect(page.locator('.title')).toHaveCSS('font-family', /Press Start 2P/);

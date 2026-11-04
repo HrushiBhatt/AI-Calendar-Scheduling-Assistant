@@ -107,6 +107,17 @@ A new user has no history, so each hour starts at a flat prior that blends towar
 **Safety.** There are no accounts, so the demo never asks for a password. It sends nothing anywhere, and it carries the same Content-Security-Policy as a meta tag, because Pages can't send response headers. The in-browser backend is only bundled in this build: the normal build doesn't contain it.
 **History.** An earlier Pages build was reverted (commits `606a645`, `13b0c26`), because it replaced the scheduler with TypeScript and predated the planner. Renaming the repo later left that stale build blank, since it had the old repo path hardcoded. The path now comes from the repo's name at build time.
 
+### A feature without keys stays visible
+
+**Decision.** Without keys, the Google buttons show disabled and the Plan page offers the form. Each says what's missing. The server reports whether it has a model through `assistant_available` on the user.
+**Why.** These buttons used to disappear, so a missing or misplaced `.env` looked like the features didn't exist, with nothing on screen to explain it.
+**Cost.** A server run without keys tells its visitors so. That's acceptable, because a real deployment has its keys.
+
+### Google sign-in and Google Calendar are separate consents
+
+**Decision.** Sign-in asks only for `openid`, `email` and `profile`. Connecting a calendar is a second consent, offered on the Brew and Plan pages.
+**Why.** Someone can use the app without giving it their calendar, and Google's guidelines ask apps to request scopes when a feature needs them. The cost is a second consent screen for people who want both.
+
 ## Security architecture
 
 The design assumes any single layer can fail, so requests pass through independent ones. Order in code: logging, panic recovery, security headers, body limit, then for `/api`: cross-origin check, rate limit, CSRF, session, and finally a user-scoped query.
@@ -206,7 +217,7 @@ Everything except `/api/health`, the sign-in routes and the Google webhook requi
 
 - **Scheduler.** 17 golden fixtures, each with a semantic check so a golden file can't quietly enshrine a wrong answer, plus a property test over 400 random calendars in five zones checking no overlaps, caps held, and the same plan for a shuffled input.
 - **Calendar.** A fake provider covers sync, push, renewal and write-back. The Google provider runs against a local stand-in for the Calendar API.
-- **Assistant.** A scripted fake model covers the tool loop, retries, the round cap, the budget, dropped narration and degradation.
+- **Assistant.** A scripted fake model covers the tool loop, retries, the round cap, the budget, dropped narration and degradation. `make eval` runs 30 requests against the real model and costs money, so CI doesn't run it. The [latest results](backend/internal/assistant/testdata/eval-results.md) are checked in.
 - **Security.** Tests attack the app: replaying a stolen cookie after sign-out, forged ID tokens signed with the wrong key, wrong audience and issuer, login CSRF, email-collision account takeover, and cross-site requests. Google sign-in runs against a local OpenID provider using real RSA signatures, so the actual verification code runs. Each of these protections was also removed on purpose to confirm its test fails. Run the same exercise on any new protection.
 - **Browser.** Playwright drives a real browser through the planning loop, and checks that the policy blocks an injected script, the page loads nothing from a third party, and a copied cookie stops working after sign-out.
 - **Live demo.** A second Playwright suite serves the static build the way Pages does, under the repo's path with `404.html` as the fallback. It checks that the page loads, deep links work, the WebAssembly scheduler plans around the sample meetings, and nothing calls a server. Publishing waits on it, so a broken build can't replace the live site.
@@ -215,13 +226,13 @@ Everything except `/api/health`, the sign-in routes and the Google webhook requi
 
 **Not yet verified against the real thing**
 
-- Google sign-in and Calendar need a real OAuth client. So far they've run only against local stand-ins.
-- The assistant's 30-request eval set hasn't been run against the real model, so there are no accuracy numbers. Run it with `make eval` and publish the table.
+- Google sign-in and Calendar have run end to end only against local stand-ins. Google has accepted the sign-in and calendar requests and the client secret from a real OAuth client, but nobody has yet completed a consent screen and a calendar sync with a real account.
+- The assistant has one eval run against the real model. It measures the requests the model produces, not how often its note is shown. The first real requests found a note being dropped for repeating the user's own limit, so watch `narration_invented_time` in `assistant_turns`.
 
 **Next, in order**
 
 1. **Host the full app.** The live demo is on GitHub Pages, but sign-in, Google Calendar, the assistant and server-run timers need a container host with a persistent disk. Set `JWT_SECRET`, `SECURE_COOKIES` and `TRUSTED_PROXIES`.
-2. **Verify Google and the eval** against the real services, above.
+2. **Finish verifying Google** with a real account, above.
 3. **Send email.** Email unlocks address verification and password reset. Today a forgotten password can't be recovered unless Google is linked.
 4. **Two-factor authentication** with TOTP, for password accounts.
 5. **Account deletion and data export,** so users can remove everything the app holds.

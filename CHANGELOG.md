@@ -2,6 +2,18 @@
 
 Every notable change to Brew Focus, and why it was made. Newest first. Dates are when the work landed; there are no version tags yet.
 
+## 2026-11-04: Google and Claude in the interface, and their first real runs
+
+- **Changed: Google sign-in and calendar connection now always show, with Google's logo.** *Why:* they used to disappear when the server had no keys, so a misplaced key file made them look like they didn't exist. Without keys they now show disabled and say what's missing. The buttons follow Google's branding rules, so they stay white instead of matching the pixel theme.
+- **Added: a calendar card on the Plan page, and an offer to connect on the Brew page.** *Why:* connecting was hidden inside Settings, and signing in lands on the timer. The offer can be dismissed, and the demo account's sample calendar doesn't count as connected.
+- **Changed: the planner names Claude, and says when Claude isn't set up.** *Why:* the page couldn't tell whether the server had a key, so a missing key only showed up after sending a request. The server now reports it as `assistant_available`. The live demo keeps saying it uses a phrase matcher, because it isn't Claude.
+- **Fixed: Claude's note disappeared when it repeated the user's own limit, as in "nothing after 11".** *Why:* the check that drops invented times didn't know those times came from the request. The first real requests found this. Validated limits are now allowed, and other times are still dropped.
+- **Added: the server logs when the Claude API fails, with the status code only.** *Why:* the user just sees a fallback plan, so a rejected key or spent credits left the owner no sign of the cause.
+- **Fixed: the login page would break if the server couldn't be reached.** *Why:* it read a failed request's value directly. It now says the server can't be reached and keeps the form usable.
+- **Measured: the first eval against the real model.** 29 of 30 prompts were fully correct on `claude-haiku-5-5`, at about 5,900 tokens per request and 3.2 s typical latency. The miss was a request for a task that doesn't exist, and nothing was placed for it. It's one run, and the [results](backend/internal/assistant/testdata/eval-results.md) are checked in.
+- **Verified: Google accepts a real OAuth client's sign-in and calendar requests and its secret.** *Not verified:* nobody has finished a consent screen or synced a real calendar yet.
+- **Changed: the setup docs now warn against keys in `.env.example`, and against Google's Testing mode.** *Why:* the app reads only `.env` and git tracks the example, so keys saved there don't work and could be published. In Testing mode, Google ends calendar access every 7 days.
+
 ## 2026-11-04: a working public site
 
 - **Fixed: the site at [hrushibhatt.github.io/AI-Calendar-Scheduling-Assistant/](https://hrushibhatt.github.io/AI-Calendar-Scheduling-Assistant/) was a blank page.** *Why:* it was still a September build with the repo's old name hardcoded, so renaming the repo made every file fail to load, and nothing ever deployed from `main` to replace it.

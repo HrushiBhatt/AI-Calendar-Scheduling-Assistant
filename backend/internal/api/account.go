@@ -36,12 +36,15 @@ type userView struct {
 	store.User
 	HasPassword  bool `json:"has_password"`
 	GoogleLinked bool `json:"google_linked"`
+	// AssistantAvailable says whether this server has a model, so the Plan page can offer
+	// Claude or say it isn't set up, rather than failing over only after a request.
+	AssistantAvailable bool `json:"assistant_available"`
 }
 
 func (h *handler) viewOf(user store.User) (userView, error) {
 	var linked int64
 	err := h.DB.Model(&store.Identity{}).Where("user_id = ? AND provider = ?", user.ID, "google").Count(&linked).Error
-	return userView{User: user, HasPassword: len(user.PasswordHash) > 0, GoogleLinked: linked > 0}, err
+	return userView{User: user, HasPassword: len(user.PasswordHash) > 0, GoogleLinked: linked > 0, AssistantAvailable: h.Assistant != nil}, err
 }
 
 func (h *handler) register(c *gin.Context) {

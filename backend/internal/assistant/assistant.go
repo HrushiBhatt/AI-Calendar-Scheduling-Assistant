@@ -309,22 +309,27 @@ func (a *Assistant) degrade(ctx context.Context, t *turn, res *Result, failure s
 	}
 	t.planView = view
 	res.Degraded = true
-	res.Notice = "The assistant didn't answer, so this plan uses the form's defaults."
+	res.Notice = "Claude didn't answer, so this plan uses the form's defaults."
 	if failure == "refusal" {
-		res.Notice = "The assistant declined that request, so this plan uses the form's defaults."
+		res.Notice = "Claude declined that request, so this plan uses the form's defaults."
 	}
 	return nil
 }
 
-// providerFailure labels a failed API call. The SDK already retried it once.
+// providerFailure labels a failed API call. The SDK already retried it once. The log is the
+// owner's only sign of a rejected key or spent credits, since the user just sees a fallback
+// plan. It carries the status at most, never the provider's own error text.
 func providerFailure(ctx context.Context, err error) string {
 	var apiErr *anthropic.Error
 	switch {
 	case errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil:
+		log.Print("assistant: the Claude API timed out")
 		return "timeout"
 	case errors.As(err, &apiErr):
+		log.Printf("assistant: the Claude API answered %d", apiErr.StatusCode)
 		return fmt.Sprintf("provider_error: %d", apiErr.StatusCode)
 	}
+	log.Print("assistant: couldn't reach the Claude API")
 	return "provider_error: " + truncateRunes(err.Error(), 80)
 }
 

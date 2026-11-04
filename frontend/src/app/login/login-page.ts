@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject, resource, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, resource, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Api, errorMessage } from '../core/api';
 import { Auth } from '../core/auth';
+import { GoogleLogo } from '../shared/google-logo';
 import { PixelMug } from '../shared/pixel-mug';
 
 /** Why the server sent the browser back here from Google, by the code in ?error=. */
@@ -18,7 +19,7 @@ const MIN_NEW_PASSWORD = 12;
 
 @Component({
   selector: 'app-login-page',
-  imports: [ReactiveFormsModule, PixelMug],
+  imports: [ReactiveFormsModule, PixelMug, GoogleLogo],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login-page.html',
   styleUrl: './login-page.css',
@@ -29,6 +30,8 @@ export class LoginPage {
   private readonly router = inject(Router);
 
   protected readonly providers = resource({ loader: () => this.api.authProviders() });
+  /** Whether the server has Google sign-in; null until it answers, and if it can't be reached. */
+  protected readonly google = computed(() => (this.providers.hasValue() ? this.providers.value().google : null));
   protected readonly mode = signal<'login' | 'register'>('login');
   protected readonly error = signal(SIGN_IN_ERRORS[inject(ActivatedRoute).snapshot.queryParamMap.get('error') ?? ''] ?? '');
   protected readonly busy = signal(false);

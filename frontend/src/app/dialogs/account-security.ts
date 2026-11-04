@@ -4,11 +4,12 @@ import { Api, errorMessage } from '../core/api';
 import { Auth } from '../core/auth';
 import { Brew } from '../core/brew';
 import { Toasts } from '../core/toast';
+import { GoogleLogo } from '../shared/google-logo';
 
 /** The account part of the settings dialog: password, Google sign-in, signed-in devices. */
 @Component({
   selector: 'app-account-security',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, GoogleLogo],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="group" aria-labelledby="set-security">
@@ -36,7 +37,7 @@ import { Toasts } from '../core/toast';
         </button>
       </form>
 
-      @if (providers.value()?.google || auth.user()?.google_linked) {
+      @if ((providers.hasValue() && providers.value().google) || auth.user()?.google_linked) {
         <div class="line">
           <span class="setting-hint">
             {{ auth.user()?.google_linked ? 'Google sign-in is on.' : 'Sign in with your Google account as well.' }}
@@ -44,7 +45,7 @@ import { Toasts } from '../core/toast';
           @if (auth.user()?.google_linked) {
             <button class="btn btn-sm px" (click)="unlink()" [disabled]="busy()">Remove Google sign-in</button>
           } @else {
-            <a class="btn btn-sm px" href="/api/auth/google/link">Connect Google sign-in</a>
+            <a class="gbtn" href="/api/auth/google/link"><app-google-logo />Connect Google sign-in</a>
           }
         </div>
       }

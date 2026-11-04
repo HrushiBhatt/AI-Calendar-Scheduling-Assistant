@@ -103,6 +103,9 @@ func (t *turn) plan(ctx context.Context, input json.RawMessage) (string, error) 
 		return "", err
 	}
 	t.planView = view
+	// Validated limits came from the request, so the model may repeat them, as with the workday.
+	t.allowText(args.AvoidBefore)
+	t.allowText(args.AvoidAfter)
 
 	type block struct {
 		Day   string `json:"day"`

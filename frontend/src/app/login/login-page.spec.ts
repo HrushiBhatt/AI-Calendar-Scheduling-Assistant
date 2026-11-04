@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { LoginPage } from './login-page';
 
-async function open(query: Record<string, string> = {}, providers = { google: false }) {
+async function open(query: Record<string, string> = {}, providers: { google: boolean } | 'unreachable' = { google: false }) {
   TestBed.configureTestingModule({
     imports: [LoginPage],
     providers: [
@@ -18,7 +18,9 @@ async function open(query: Record<string, string> = {}, providers = { google: fa
   const http = TestBed.inject(HttpTestingController);
   fixture.detectChanges();
   TestBed.tick(); // starts the resource's request; whenStable would wait on it forever
-  http.expectOne('/api/auth/providers').flush(providers);
+  const req = http.expectOne('/api/auth/providers');
+  if (providers === 'unreachable') req.flush('', { status: 502, statusText: 'Bad Gateway' });
+  else req.flush(providers);
   await fixture.whenStable();
   fixture.detectChanges();
   const el = fixture.nativeElement as HTMLElement;
@@ -36,11 +38,36 @@ async function open(query: Record<string, string> = {}, providers = { google: fa
 }
 
 describe('LoginPage', () => {
-  it('offers Google only when the server has it', async () => {
-    expect((await open()).el.querySelector('.google')).toBeNull();
-    TestBed.resetTestingModule();
+  it('signs in with Google, with the logo, when the server has it', async () => {
     const { el } = await open({}, { google: true });
-    expect(el.querySelector('.google')?.getAttribute('href')).toBe('/api/auth/google/start');
+    const link = el.querySelector<HTMLAnchorElement>('a.google')!;
+    expect(link.getAttribute('href')).toBe('/api/auth/google/start');
+    expect(link.textContent).toContain('Sign in with Google');
+    expect(link.querySelector('app-google-logo svg')).not.toBeNull();
+    expect(el.textContent).not.toContain("isn't set up");
+  });
+
+  it("names the action on the sign-up tab", async () => {
+    const { el, fixture } = await open({}, { google: true });
+    el.querySelectorAll<HTMLButtonElement>('[role=tab]')[1].click();
+    fixture.detectChanges();
+    expect(el.querySelector('a.google')?.textContent).toContain('Sign up with Google');
+  });
+
+  it("still shows Google without keys, disabled, and says what's missing", async () => {
+    const { el } = await open();
+    expect(el.querySelector('a.google')).toBeNull();
+    const button = el.querySelector<HTMLButtonElement>('button.google-off')!;
+    expect(button.disabled).toBe(true);
+    expect(button.querySelector('app-google-logo svg')).not.toBeNull();
+    expect(el.textContent).toContain("Google sign-in isn't set up on this server");
+  });
+
+  it('keeps the page working when the server can\'t be reached', async () => {
+    const { el } = await open({}, 'unreachable');
+    expect(el.querySelector<HTMLButtonElement>('button.google-off')?.disabled).toBe(true);
+    expect(el.textContent).toContain("Couldn't reach the server");
+    expect(el.querySelector('input[type=email]')).not.toBeNull();
   });
 
   it("explains why Google sent someone back, and ignores codes it doesn't know", async () => {

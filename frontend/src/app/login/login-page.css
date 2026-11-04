@@ -69,13 +69,15 @@
   text-align: left;
 }
 
-.or {
-  margin: 12px 0;
+.setup-hint {
+  margin-top: 10px;
   font-size: 0.75rem;
-  color: var(--gray-500);
+  color: var(--gray-400);
 }
 
-.google {
-  display: block;
-  text-decoration: none;
+.or {
+  margin: 16px 0;
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  text-align: center;
 }

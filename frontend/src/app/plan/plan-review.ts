@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { UNPLACED_TEXT } from '../core/assistant';
 import { PlanView, ScheduledBlock } from '../core/models';
 import { dayIn, formatDay, formatTime } from '../core/zoned';
@@ -35,7 +36,7 @@ const SOURCE_TITLE: Record<PlanView['source'], string> = {
       }
       @if (plan().rationale) {
         <div class="narration">
-          <span class="label">Assistant’s note</span>
+          <span class="label">{{ browserOnly ? 'Assistant’s note' : 'Claude’s note' }}</span>
           <p>{{ plan().rationale }}</p>
         </div>
       }
@@ -225,6 +226,8 @@ const SOURCE_TITLE: Record<PlanView['source'], string> = {
   `,
 })
 export class PlanReview {
+  /** The demo's phrase matcher isn't Claude, so only the full app says it is. */
+  protected readonly browserOnly = environment.browserBackend;
   readonly plan = input.required<PlanView>();
   readonly zone = input.required<string>();
   readonly excluded = input<ReadonlySet<number>>(new Set());

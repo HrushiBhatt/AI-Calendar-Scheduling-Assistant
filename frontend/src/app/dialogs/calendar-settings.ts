@@ -1,21 +1,22 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, resource, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { environment } from '../../environments/environment';
 import { Api, errorMessage } from '../core/api';
 import { Brew } from '../core/brew';
-import { LiveEvents } from '../core/live';
+import { Calendars } from '../core/calendars';
 import { CalendarAccount } from '../core/models';
 import { Toasts } from '../core/toast';
+import { ConnectCalendarButton } from '../shared/connect-calendar-button';
 
 /** The calendar part of the settings dialog. */
 @Component({
   selector: 'app-calendar-settings',
-  imports: [DatePipe],
+  imports: [DatePipe, ConnectCalendarButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="group" aria-labelledby="set-cal">
       <h3 id="set-cal">Calendar</h3>
-      @if (state.value(); as s) {
+      @if (calendars.info(); as s) {
         @for (a of s.accounts; track a.id) {
           <div class="acct px">
             <div class="who">
@@ -41,13 +42,11 @@ import { Toasts } from '../core/toast';
           </p>
         }
         @if (s.configured) {
-          <button class="btn btn-primary px" (click)="connect()" [disabled]="busy()">
-            {{ s.provider === 'google' ? 'Connect Google Calendar' : 'Connect a test calendar' }}
-          </button>
+          <app-connect-calendar-button />
         } @else if (!s.accounts.length) {
           <p class="setting-hint">Google Calendar isn't set up on this server (see the README). The planner still works around an empty calendar.</p>
         }
-      } @else if (state.error()) {
+      } @else if (calendars.state.error()) {
         <p class="err">Couldn't load your calendars.</p>
       }
       @if (browserOnly) {
@@ -110,30 +109,16 @@ export class CalendarSettings {
   private readonly api = inject(Api);
   private readonly toasts = inject(Toasts);
   protected readonly brew = inject(Brew);
+  protected readonly calendars = inject(Calendars);
   protected readonly busy = signal(false);
   protected readonly browserOnly = environment.browserBackend;
-  protected readonly state = resource({ loader: () => this.api.calendarAccounts() });
-
-  constructor() {
-    const sub = inject(LiveEvents).events$.subscribe((e) => {
-      if (e.type === 'calendar.synced') this.state.reload();
-    });
-    inject(DestroyRef).onDestroy(() => sub.unsubscribe());
-  }
-
-  protected async connect(): Promise<void> {
-    await this.run(async () => {
-      const { auth_url } = await this.api.calendarConnect();
-      window.location.assign(auth_url); // the provider sends the browser back to /settings
-    });
-  }
 
   protected async syncNow(): Promise<void> {
     await this.run(async () => {
       await this.api.calendarSync();
       this.toasts.show('Calendar synced.');
     });
-    this.state.reload();
+    this.calendars.state.reload();
   }
 
   protected async disconnect(a: CalendarAccount): Promise<void> {
@@ -142,7 +127,7 @@ export class CalendarSettings {
       await this.api.calendarDisconnect(a.id);
       this.toasts.show('Calendar disconnected.');
     });
-    this.state.reload();
+    this.calendars.state.reload();
   }
 
   protected flag(key: 'writeBack' | 'shareEventTitles', event: Event): void {
