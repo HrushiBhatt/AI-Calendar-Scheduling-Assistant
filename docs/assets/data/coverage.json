@@ -1,0 +1,1 @@
+{"total": 78.2, "rows": [["internal/events", 100.0], ["internal/planner", 97.3], ["internal/engine", 92.9], ["internal/auth", 88.6], ["internal/api", 85.3], ["internal/assistant", 81.9], ["internal/scheduler", 81.6], ["internal/store", 78.4], ["internal/plans", 76.4], ["internal/calendar", 70.9], ["cmd/server", 14.9], ["internal/demo", 0.0]]}
