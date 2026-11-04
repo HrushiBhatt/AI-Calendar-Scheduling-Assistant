@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/api/middleware"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/auth"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/demo"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/store"
@@ -250,7 +251,7 @@ func TestSecurityHeaders(t *testing.T) {
 
 func TestHSTSAndCookiePrefixOverHTTPS(t *testing.T) {
 	e := setup(t, "")
-	router := NewRouter(Deps{DB: e.db, Hub: e.hub, Engine: e.engine, Calendar: e.cal, Plans: e.plans, Dispatcher: e.disp,
+	router := NewRouter(Deps{DB: e.db, Hub: e.hub, Engine: e.engine,
 		Auth: auth.NewManager([]byte("test-secret"), true, e.db)}, "")
 	token := "0123456789012345678901234567890123456789012345678901234567890123"
 	req := httptest.NewRequest("POST", "/api/auth/register", strings.NewReader(`{"email":"ada@example.com","password":"`+testPassword+`"}`))
@@ -279,7 +280,7 @@ func TestHSTSAndCookiePrefixOverHTTPS(t *testing.T) {
 func TestOversizedBodiesAreRefused(t *testing.T) {
 	e := setup(t, "")
 	c := e.anonymous(t)
-	big := strings.Repeat("x", maxBody+1)
+	big := strings.Repeat("x", middleware.MaxBody+1)
 	if code := c.call("POST", "/api/auth/login", obj{"email": "a@b.co", "password": big}, nil); code != 413 {
 		t.Errorf("oversized body: %d, want 413", code)
 	}
@@ -324,7 +325,7 @@ func TestLogsCarryNeitherCodesNorCookies(t *testing.T) {
 	}()
 
 	r := gin.New()
-	r.Use(baseMiddleware(false)...)
+	r.Use(middleware.Base(false)...)
 	r.GET("/ok", func(c *gin.Context) { c.Status(200) })
 	r.GET("/boom", func(*gin.Context) { panic("boom") })
 
@@ -350,7 +351,7 @@ func TestLogsCarryNeitherCodesNorCookies(t *testing.T) {
 
 func TestEventStreamEndsWhenItsSessionIsRevoked(t *testing.T) {
 	e := setup(t, "")
-	router := NewRouter(Deps{DB: e.db, Hub: e.hub, Engine: e.engine, Calendar: e.cal, Plans: e.plans, Dispatcher: e.disp,
+	router := NewRouter(Deps{DB: e.db, Hub: e.hub, Engine: e.engine,
 		Auth: auth.NewManager([]byte("test-secret"), false, e.db), Keepalive: 20 * time.Millisecond}, "")
 	server := httptest.NewServer(router)
 	defer server.Close()

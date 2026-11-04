@@ -1,0 +1,161 @@
+/* The timer: the mode chip, the clock on the mug, the progress bar and the controls. */
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+.phase-chip {
+  padding: 8px 12px;
+  margin: 3px;
+  font-family: var(--font-pixel);
+  font-size: 0.5rem;
+  line-height: 1.6;
+  text-transform: uppercase;
+  color: var(--text-2);
+  background: var(--surface);
+}
+
+.is-break .phase-chip {
+  --bd: var(--break-dim);
+  color: var(--break);
+}
+
+.clock {
+  font-family: var(--font-pixel);
+  font-size: clamp(1.5rem, 7vw, 2.3rem);
+  white-space: nowrap;
+  color: #efebe9; /* it sits on the mug, whose colors don't change with the theme */
+  text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+}
+
+app-pixel-mug.is-running .clock-sep {
+  animation: blink 1s steps(1) infinite;
+}
+
+.clock-label {
+  margin-top: 12px;
+  font-family: var(--font-pixel);
+  font-size: 0.5rem;
+  color: #e8c49a; /* on the mug too, so these stay fixed in both themes */
+  text-shadow: 2px 2px 0 #000;
+}
+
+.is-break .clock-label {
+  color: #8fd19e;
+}
+
+.intention {
+  max-width: 440px;
+  min-height: 1.5em;
+  font-size: 1rem;
+  color: var(--text-soft);
+  overflow-wrap: anywhere;
+}
+
+.intention.is-empty,
+.is-break .intention {
+  font-size: 0.85rem;
+  color: var(--text-4);
+}
+
+.segments {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: 3px;
+  width: min(100%, clamp(320px, 46vh, 460px));
+}
+
+.segments span {
+  height: 10px;
+  background: var(--surface-3);
+}
+
+.segments .on {
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+
+.is-break .segments .on {
+  background: var(--break);
+  box-shadow: none;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding-bottom: 6px;
+}
+
+.ctrl {
+  --bd: var(--line-2);
+  --lift: 7px;
+  --drop: var(--bg);
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  color: var(--text-2);
+  background: var(--surface-3);
+  transition: transform 0.12s, color 0.2s;
+}
+
+.ctrl:hover:not(:disabled) {
+  color: var(--text);
+  transform: translateY(-2px);
+}
+
+.ctrl:active:not(:disabled) {
+  --lift: 3px;
+  transform: translateY(3px);
+}
+
+.ctrl-play {
+  --bd: var(--accent-bright);
+  --drop: var(--coffee-dark);
+  width: 76px;
+  height: 76px;
+  color: var(--bg);
+  background: var(--accent);
+}
+
+.ctrl-play:hover:not(:disabled) {
+  color: var(--bg);
+}
+
+.ctrl-play .icon {
+  width: 26px;
+  height: 26px;
+}
+
+.is-break .ctrl-play {
+  --bd: #b9e6c3;
+  --drop: var(--break-dim);
+  background: var(--break);
+}
+
+.today {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 20px;
+  font-size: 0.8rem;
+  color: var(--text-3);
+}
+
+.today b {
+  font-family: var(--font-pixel);
+  font-size: 0.55rem;
+  font-weight: normal;
+  color: var(--text);
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.2;
+  }
+}

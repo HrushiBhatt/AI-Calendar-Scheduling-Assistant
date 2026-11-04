@@ -82,9 +82,6 @@ type FocusRequest struct {
 	Intention string
 	TaskID    *uint
 	Day       string // the user's local calendar day
-	// ScheduledID attributes the session to the planned block that started it (nil when
-	// the user started it by hand).
-	ScheduledID *uint
 }
 
 type command struct {
@@ -135,7 +132,6 @@ func (e *Engine) StartFocus(userID uint, req FocusRequest) (State, error) {
 	session := &store.Session{
 		UserID: userID, TaskID: req.TaskID, Mode: req.Mode, Planned: int(req.Planned.Seconds()),
 		Intention: req.Intention, Day: req.Day, State: store.StateRunning, EndsAt: &endsAt,
-		ScheduledID: req.ScheduledID,
 	}
 	if err := e.db.Create(session).Error; err != nil {
 		return State{}, err
@@ -253,6 +249,7 @@ func (e *Engine) run(t *timer) {
 	}
 }
 
+// apply carries out one command on a timer. Only the timer's own goroutine calls it.
 func (e *Engine) apply(t *timer, action Action) (State, error) {
 	s := &t.state
 	switch {
@@ -337,6 +334,7 @@ func (e *Engine) unlocked(userID uint, completed bool) string {
 	return store.CafeUnlock(int(n))
 }
 
+// publish sends an event to all of the user's open tabs and devices.
 func (e *Engine) publish(userID uint, kind string, data any) {
 	e.hub.Publish(userID, events.Event{Type: kind, Data: data})
 }
@@ -348,6 +346,7 @@ func (e *Engine) check(err error) {
 	}
 }
 
+// snapshot is the timer's state right now, with the remaining time worked out.
 func (t *timer) snapshot() State {
 	s := t.state
 	s.ServerTime = time.Now()
@@ -357,10 +356,12 @@ func (t *timer) snapshot() State {
 	return s
 }
 
+// elapsed is how much of the block has actually run.
 func (t *timer) elapsed() time.Duration {
 	return time.Duration(t.state.DurationMs-t.snapshot().RemainingMs) * time.Millisecond
 }
 
+// idle is the state reported when no timer is running.
 func idle(phase Phase) State {
 	return State{Phase: phase, Status: Idle, ServerTime: time.Now()}
 }

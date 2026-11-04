@@ -1,0 +1,44 @@
+<section class="panel px" aria-labelledby="modes-title">
+  <h2 class="panel-title" id="modes-title">Brew mode</h2>
+  <ul class="mode-list">
+    @for (m of brew.modes(); track m.key) {
+      <li class="mode-item">
+        <button class="mode px" [attr.aria-pressed]="m.key === brew.mode().key" [disabled]="brew.busy()" (click)="brew.selectMode(m)">
+          <span class="mode-time">{{ m.focus }}<small>/{{ m.rest }}</small></span>
+          <span class="mode-name">{{ m.name }}</span>
+          <span class="mode-blurb">{{ m.blurb }}</span>
+        </button>
+        @if (m.presetId !== undefined) {
+          <button class="mode-delete" [attr.aria-label]="'Delete ' + m.name" [disabled]="brew.busy()" (click)="brew.deleteMode(m)">
+            <app-sprite class="icon-sm" [rows]="closeIcon" />
+          </button>
+        }
+      </li>
+    }
+  </ul>
+  @if (brew.busy()) {
+    <p class="panel-note">Modes unlock when this brew ends.</p>
+  }
+
+  <details class="custom" #details>
+    <summary>Custom brew</summary>
+    <form class="custom-form" [formGroup]="form" (ngSubmit)="save(details)">
+      <label class="field wide">
+        Name
+        <input class="input px" formControlName="name" maxlength="32" placeholder="e.g. Thesis sprint" />
+      </label>
+      <label class="field">
+        Focus (min)
+        <input class="input px" type="number" formControlName="focus" min="1" max="180" />
+      </label>
+      <label class="field">
+        Break (min)
+        <input class="input px" type="number" formControlName="rest" min="0" max="60" />
+      </label>
+      @if (error()) {
+        <p class="form-error wide">{{ error() }}</p>
+      }
+      <button class="btn btn-primary px wide">Save mode</button>
+    </form>
+  </details>
+</section>

@@ -1,11 +1,9 @@
-.PHONY: install api web build serve test audit docker eval e2e demo pages-wasm pages pages-build
+.PHONY: install api web demo build serve test e2e audit docker pages pages-build
 
 # Secrets and local config (JWT_SECRET, ...) come from an untracked .env; see .env.example.
 -include .env
-export JWT_SECRET SECURE_COOKIES TRUSTED_PROXIES ADDR DB_PATH GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_REDIRECT_URL \
-	GOOGLE_LOGIN_REDIRECT_URL \
-	CALENDAR_ENC_KEY PUBLIC_URL ANTHROPIC_API_KEY ASSISTANT_MODEL ASSISTANT_DAILY_TOKENS ASSISTANT_EFFORT DEMO \
-	CALENDAR_PROVIDER ASSISTANT_PROVIDER
+export JWT_SECRET SECURE_COOKIES TRUSTED_PROXIES ADDR DB_PATH DEMO \
+	GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_LOGIN_REDIRECT_URL
 
 # Switch to the Node version in .nvmrc (Angular 22 needs 24.15+) when nvm is installed, so
 # frontend targets work even in a terminal still holding an older Node on its PATH.
@@ -24,6 +22,9 @@ api: ## Go API on :5001 (Ctrl+C shuts down gracefully; running timers resume on 
 web: ## Angular dev server on :4200, proxying /api to :5001
 	$(NODE) cd frontend && npx ng serve
 
+demo: ## the API with a seeded demo account (demo@brewfocus.dev / brewfocus)
+	cd backend && DEMO=true go run ./cmd/server
+
 build: ## production frontend bundle + static Go binary
 	$(NODE) cd frontend && npx ng build
 	cd backend && CGO_ENABLED=0 go build -o bin/brewfocus ./cmd/server
@@ -35,21 +36,8 @@ test: ## Go tests under the race detector, then Angular unit tests
 	cd backend && go vet ./... && go test -race ./...
 	$(NODE) cd frontend && npx ng test --watch=false
 
-pages-wasm: ## compile the real scheduler to WebAssembly for the GitHub Pages demo
-	mkdir -p frontend/.pages-assets
-	cd backend && GOOS=js GOARCH=wasm go build -trimpath -ldflags="-s -w" -o ../frontend/.pages-assets/planner.wasm ./cmd/plannerwasm
-	cp -f "$$(cd backend && go env GOROOT)/lib/wasm/wasm_exec.js" frontend/.pages-assets/wasm_exec.js
-	chmod u+w frontend/.pages-assets/wasm_exec.js # it comes read-only from Go's module cache
-
-pages: pages-wasm ## the GitHub Pages demo on :4200: runs entirely in the browser, no Go server
-	$(NODE) cd frontend && npx ng serve --configuration pages
-
-# The site CI publishes. BASE must be the repo's path on github.io, or nothing loads.
-BASE ?= /AI-Calendar-Scheduling-Assistant/
-pages-build: pages-wasm ## the GitHub Pages site, ready to publish, in frontend/dist/brew-focus/browser
-	$(NODE) cd frontend && npx ng build --configuration pages --base-href "$(BASE)"
-	# 404.html boots the app on deep links like /progress; .nojekyll serves files as they are.
-	cd frontend/dist/brew-focus/browser && cp index.html 404.html && touch .nojekyll
+e2e: ## browser tests against the real Go server
+	$(NODE) cd frontend && npm run e2e
 
 audit: ## the security scans CI runs: vulnerable dependencies, risky code, leaked secrets
 	cd backend && go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
@@ -57,12 +45,16 @@ audit: ## the security scans CI runs: vulnerable dependencies, risky code, leake
 	cd backend && go run github.com/zricethezav/gitleaks/v8@v8.30.1 git --redact --no-banner --config ../.gitleaks.toml ..
 	$(NODE) cd frontend && npm audit --omit=dev --audit-level=high
 
-eval: ## run the assistant's eval set against the real model (costs a few cents; needs ANTHROPIC_API_KEY)
-	cd backend && go test -tags evals -run TestEvals -count=1 -v ./internal/assistant
-
-demo: ## the app with a seeded demo account (demo@brewfocus.dev / brewfocus) and no keys needed
-	cd backend && DEMO=true go run ./cmd/server
-
 docker: ## build and run the production image (data persists in the brewfocus-data volume)
 	docker build -t brew-focus .
 	docker run --rm -p 5001:5001 -v brewfocus-data:/data -e JWT_SECRET -e SECURE_COOKIES -e TRUSTED_PROXIES brew-focus
+
+pages: ## the GitHub Pages demo on :4200: runs entirely in the browser, no Go server
+	$(NODE) cd frontend && npx ng serve --configuration pages
+
+# The site CI publishes. BASE must be the repo's path on github.io, or nothing loads.
+BASE ?= /AI-Calendar-Scheduling-Assistant/
+pages-build: ## the GitHub Pages site, ready to publish, in frontend/dist/brew-focus/browser
+	$(NODE) cd frontend && npx ng build --configuration pages --base-href "$(BASE)"
+	# 404.html boots the app on deep links like /progress; .nojekyll serves files as they are.
+	cd frontend/dist/brew-focus/browser && cp index.html 404.html && touch .nojekyll

@@ -51,7 +51,6 @@ backups/
 node_modules/
 frontend/dist/
 frontend/.angular/
-frontend/.pages-assets/
 frontend/coverage/
 frontend/out-tsc/
 frontend/test-results/

@@ -113,7 +113,7 @@ func setupGoogle(t *testing.T) *googleEnv {
 		Name: "google", ClientID: testClientID, ClientSecret: "secret", RedirectURL: "http://app.example/api/auth/google/callback",
 		AuthURL: idp.server.URL + "/auth", TokenURL: idp.server.URL + "/token", JWKSURL: idp.server.URL + "/certs", Issuer: idp.server.URL,
 	})
-	router := NewRouter(Deps{DB: e.db, Hub: e.hub, Engine: e.engine, Calendar: e.cal, Plans: e.plans, Dispatcher: e.disp,
+	router := NewRouter(Deps{DB: e.db, Hub: e.hub, Engine: e.engine,
 		Auth: auth.NewManager([]byte("test-secret"), false, e.db), Login: login}, "")
 	server := httptest.NewServer(router)
 	t.Cleanup(server.Close)
@@ -157,6 +157,7 @@ func (g *googleEnv) startFlow(t *testing.T, c *client, path string) string {
 	if g.idp.nonce == "" || q.Get("state") == "" {
 		t.Errorf("no nonce or state in %s", to)
 	}
+	// Sign-in asks for who you are, and nothing more.
 	if !strings.Contains(q.Get("scope"), "openid") || strings.Contains(q.Get("scope"), "calendar") {
 		t.Errorf("scopes: %q", q.Get("scope"))
 	}
@@ -317,19 +318,6 @@ func TestGoogleCallbackRefusesLoginCSRF(t *testing.T) {
 	}
 	if _, to := visit(t, c, callback); to != "/login?error=expired" {
 		t.Errorf("second use: %q", to)
-	}
-	// A calendar state isn't a sign-in state.
-	c = g.browser(t)
-	if code := c.call("POST", "/api/auth/register", obj{"email": "bob@example.com", "password": testPassword}, nil); code != 201 {
-		t.Fatal("register")
-	}
-	var connect struct {
-		AuthURL string `json:"auth_url"`
-	}
-	c.call("GET", "/api/calendar/connect", nil, &connect)
-	link, _ := url.Parse(connect.AuthURL)
-	if _, to := visit(t, c, "/api/auth/google/callback?code=abc&state="+url.QueryEscape(link.Query().Get("state"))); !strings.Contains(to, "error=expired") {
-		t.Errorf("calendar state accepted for sign-in: %q", to)
 	}
 }
 

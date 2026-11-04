@@ -31,7 +31,7 @@ func TestSessionSecret(t *testing.T) {
 
 func TestCheckRedirect(t *testing.T) {
 	for _, good := range []string{"", "https://brew.example.com/api/auth/google/callback",
-		"http://localhost:4200/api/calendar/callback", "http://127.0.0.1:5001/api/auth/google/callback"} {
+		"http://localhost:4200/api/auth/google/callback", "http://127.0.0.1:5001/api/auth/google/callback"} {
 		if err := checkRedirect(good); err != nil {
 			t.Errorf("%q: %v", good, err)
 		}

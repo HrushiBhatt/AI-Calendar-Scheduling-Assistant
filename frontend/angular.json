@@ -90,16 +90,6 @@
                 "input": "src/index.pages.html",
                 "output": "index.html"
               },
-              "assets": [
-                {
-                  "glob": "**/*",
-                  "input": "public"
-                },
-                {
-                  "glob": "**/*",
-                  "input": ".pages-assets"
-                }
-              ],
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",

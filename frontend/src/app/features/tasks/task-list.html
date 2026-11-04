@@ -1,0 +1,69 @@
+<section class="panel px" aria-labelledby="tasks-title">
+  <h2 class="panel-title" id="tasks-title">
+    Tasks
+    <span class="count">{{ open().length }} open</span>
+  </h2>
+
+  <form class="task-form" [formGroup]="form" (ngSubmit)="add()">
+    <input class="input px" formControlName="title" maxlength="120" placeholder="New task…" aria-label="New task" />
+    <input
+      class="input px estimate"
+      type="number"
+      formControlName="estimate"
+      min="1"
+      max="20"
+      aria-label="Estimated brews"
+      title="How many focus blocks will it take?"
+    />
+    <button class="btn btn-primary btn-sm px" [disabled]="form.invalid">Add</button>
+  </form>
+
+  <ul class="task-list">
+    @for (task of open(); track task.id) {
+      <li class="task" [class.selected]="task.id === brew.taskId()">
+        <input type="checkbox" class="check-box" (change)="brew.toggleTask(task)" [attr.aria-label]="'Mark ' + task.title + ' done'" />
+        <div class="task-body">
+          <span class="task-title">{{ task.title }}</span>
+          <span class="task-meta">
+            <span class="beans" [attr.aria-label]="task.brews + ' of ' + task.estimate + ' brews'">
+              @for (full of beans(task); track $index) {
+                <i [class.full]="full" [class.over]="$index >= task.estimate"></i>
+              }
+            </span>
+            @if (task.minutes) {
+              <span>{{ task.minutes | minutes }}</span>
+            }
+          </span>
+        </div>
+        <button class="brew-btn px" (click)="brew.focusOn(task)" [disabled]="brew.busy()" [attr.aria-label]="'Focus on ' + task.title" title="Brew this task">
+          <app-sprite class="icon-sm" [rows]="playIcon" />
+        </button>
+        <button class="icon-btn" (click)="brew.removeTask(task)" [attr.aria-label]="'Delete ' + task.title">
+          <app-sprite class="icon-sm" [rows]="closeIcon" />
+        </button>
+      </li>
+    } @empty {
+      <li class="empty">Nothing planned yet. Add what you'll focus on, then press ▶ to brew it.</li>
+    }
+  </ul>
+
+  @if (done().length) {
+    <details class="done">
+      <summary>Done ({{ done().length }})</summary>
+      <ul class="task-list">
+        @for (task of done(); track task.id) {
+          <li class="task is-done">
+            <input type="checkbox" class="check-box" checked (change)="brew.toggleTask(task)" [attr.aria-label]="'Reopen ' + task.title" />
+            <div class="task-body">
+              <span class="task-title">{{ task.title }}</span>
+              <span class="task-meta">{{ task.brews }} brews · {{ task.minutes | minutes }}</span>
+            </div>
+            <button class="icon-btn" (click)="brew.removeTask(task)" [attr.aria-label]="'Delete ' + task.title">
+              <app-sprite class="icon-sm" [rows]="closeIcon" />
+            </button>
+          </li>
+        }
+      </ul>
+    </details>
+  }
+</section>

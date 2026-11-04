@@ -1,0 +1,58 @@
+<section class="panel px" aria-labelledby="mixer-title">
+  <h2 class="panel-title" id="mixer-title">
+    Ambience
+    <button class="btn btn-sm px" [class.btn-primary]="ambience.playing()" [attr.aria-pressed]="ambience.playing()" (click)="ambience.toggle()">
+      {{ ambience.playing() ? '■ Stop' : '▶ Play' }}
+    </button>
+  </h2>
+  <p class="panel-note">Layers blend. Try rain under lo-fi keys.</p>
+
+  <div class="layers">
+    @for (layer of layers; track layer.id) {
+      <div class="layer">
+        <span aria-hidden="true">{{ layer.icon }}</span>
+        <span class="layer-name">{{ layer.label }}</span>
+        <input
+          class="range"
+          type="range"
+          min="0"
+          max="1"
+          step="0.05"
+          [value]="ambience.volumes()[layer.id]"
+          [style.--val]="ambience.volumes()[layer.id]"
+          [attr.aria-label]="layer.label + ' volume'"
+          (input)="ambience.setVolume(layer.id, volume($event))"
+        />
+      </div>
+    }
+    <div class="layer">
+      <span aria-hidden="true">🎧</span>
+      <label class="layer-name file-pick" [title]="ambience.track() ?? 'Load an audio file from your computer'">
+        {{ ambience.track() ?? 'Your audio…' }}
+        <input class="sr-only" type="file" accept="audio/*" (change)="pickTrack($event)" />
+      </label>
+      <input
+        class="range"
+        type="range"
+        min="0"
+        max="1"
+        step="0.05"
+        [value]="ambience.volumes()['custom']"
+        [style.--val]="ambience.volumes()['custom']"
+        [disabled]="!ambience.track()"
+        aria-label="Your audio volume"
+        (input)="ambience.setVolume('custom', volume($event))"
+      />
+    </div>
+  </div>
+
+  <h3 class="mixer-sub" id="tick-title">Ticking</h3>
+  <div class="seg-group" role="radiogroup" aria-labelledby="tick-title">
+    @for (t of ticks; track t.id) {
+      <button class="seg px" role="radio" [attr.aria-checked]="brew.settings().tick === t.id" (click)="chooseTick(t.id)">
+        {{ t.label }}
+      </button>
+    }
+  </div>
+  <p class="panel-note">Some people focus better with a little pressure. The final minute ticks louder.</p>
+</section>

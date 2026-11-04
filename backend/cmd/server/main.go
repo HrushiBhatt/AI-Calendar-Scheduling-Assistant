@@ -3,9 +3,8 @@
 //	go run ./cmd/server                                        # API only, for `ng serve`
 //	go run ./cmd/server -static ../frontend/dist/brew-focus/browser
 //
-// Environment: JWT_SECRET signs login cookies (required in release mode),
-// SECURE_COOKIES=true when served over HTTPS. Calendar, sign-in, assistant and push
-// settings are read in config.go; each is optional and the app runs with none of them set.
+// Settings come from the environment and are read in config.go. Only JWT_SECRET is needed in
+// production; everything else is optional.
 package main
 
 import (
@@ -19,18 +18,14 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	_ "time/tzdata" // every user's IANA zone resolves, whatever the container ships
 
 	"golang.org/x/sync/errgroup"
 
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/api"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/auth"
-	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/calendar"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/demo"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/engine"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/events"
-	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/plans"
-	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/scheduler"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/store"
 )
 
@@ -45,6 +40,7 @@ func main() {
 	}
 }
 
+// run starts every component and blocks until they have all stopped.
 func run(addr, dbPath, static string) error {
 	secret, err := sessionSecret(os.Getenv("JWT_SECRET"), os.Getenv("GIN_MODE"))
 	if err != nil {
@@ -63,26 +59,23 @@ func run(addr, dbPath, static string) error {
 	if err != nil {
 		return err
 	}
-	if err := cfg.checkSealedAccounts(db); err != nil {
-		return err
-	}
 
 	// One context for everything: Ctrl+C/SIGTERM, or any component failing, stops them all.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	g, ctx := errgroup.WithContext(ctx)
 
+	// The hub fans events out to every open tab; the engine runs the timers and publishes to it.
 	hub := events.NewHub()
 	g.Go(func() error { hub.Run(ctx); return nil })
 
 	timers := engine.New(ctx, db, hub)
-	if err := timers.Restore(); err != nil {
+	if err := timers.Restore(); err != nil { // timers that were running keep going after a restart
 		return err
 	}
 
-	cal := calendar.NewService(db, hub, cfg.calendarOptions())
 	if os.Getenv("DEMO") == "true" {
-		if err := demo.Seed(ctx, db, cal, demoCalendar, time.Now()); err != nil {
+		if err := demo.Seed(db, time.Now()); err != nil {
 			return err
 		}
 		log.Printf("demo: sign in as %s / %s", demo.Email, demo.Password)
@@ -90,34 +83,17 @@ func run(addr, dbPath, static string) error {
 			log.Print("demo: DEMO=true in release mode: anyone can sign in to the demo account with this public password")
 		}
 	}
-	g.Go(func() error { return cal.Run(ctx) })        // debounced syncs, or polling without PUBLIC_URL
-	g.Go(func() error { return cal.RunRenewer(ctx) }) // push channels expire after about a week
-
-	planSvc := plans.New(db, hub)
-	// After a sync changes a calendar, check accepted blocks against it.
-	cal.AfterSync = func(ctx context.Context, userID uint) {
-		if err := planSvc.Reconcile(ctx, userID); err != nil {
-			log.Printf("plans: reconciling user %d: %v", userID, err)
-		}
-	}
-	writer := cal.NewWriter() // copies accepted blocks to a "Brew Focus" calendar when write-back is on
-	planSvc.Calendar = writer
-	g.Go(func() error { return writer.Run(ctx) })
-	dispatcher := scheduler.New(db, hub, timers)
-	planSvc.OnChange = dispatcher.Wake // a block accepted one minute out still gets its warning
-	g.Go(func() error { dispatcher.Run(ctx.Done()); return nil })
 
 	srv := &http.Server{
 		Addr: addr,
 		Handler: api.NewRouter(api.Deps{
-			DB: db, Hub: hub, Engine: timers, Calendar: cal, Plans: planSvc, Dispatcher: dispatcher,
-			Assistant:      cfg.newAssistant(db, planSvc),
+			DB: db, Hub: hub, Engine: timers,
 			Auth:           auth.NewManager(secret, secure, db),
 			Login:          cfg.newLogin(ctx),
 			TrustedProxies: cfg.trustedProxies,
 		}, static),
 		// No overall read or write timeout: event streams stay open for hours. Headers are
-		// bounded here, and bodies by the readBody middleware.
+		// bounded here, and bodies by the middleware.
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       2 * time.Minute,
 		MaxHeaderBytes:    64 << 10,
@@ -146,6 +122,7 @@ func run(addr, dbPath, static string) error {
 	return g.Wait()
 }
 
+// envOr returns an environment variable, or fallback when it's unset.
 func envOr(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v

@@ -1,0 +1,54 @@
+<section class="stage" [class.is-break]="onBreak()" aria-label="Timer">
+  <p class="phase-chip px">{{ onBreak() ? 'Break' : 'Focus' }} · {{ modeLabel() }}</p>
+
+  <app-pixel-mug [fill]="brew.fill()" [running]="status() === 'running'" [celebrate]="label() === 'NICE!'" [onBreak]="onBreak()">
+    <div class="clock" role="timer" aria-live="off">{{ clock()[0] }}<span class="clock-sep">:</span>{{ clock()[1] }}</div>
+    <div class="clock-label">{{ label() }}</div>
+  </app-pixel-mug>
+
+  <p class="intention" [class.is-empty]="!brew.intention()">{{ caption() }}</p>
+
+  <div
+    class="segments"
+    role="progressbar"
+    [attr.aria-label]="brew.phase() + ' progress'"
+    [attr.aria-valuenow]="(brew.progress() * 100).toFixed(0)"
+    aria-valuemin="0"
+    aria-valuemax="100"
+  >
+    @for (i of segments; track i) {
+      <span [class.on]="i < lit()"></span>
+    }
+  </div>
+
+  <div class="controls">
+    <button class="ctrl px" (click)="brew.reset()" aria-label="Reset" title="Reset: abandon without logging (R)">
+      <app-sprite class="icon" [rows]="icons['reset']" />
+    </button>
+    <button
+      class="ctrl ctrl-play px"
+      (click)="brew.primary()"
+      [attr.aria-label]="status() === 'running' ? 'Pause' : 'Start'"
+      [title]="status() === 'running' ? 'Pause (Space)' : 'Start (Space)'"
+    >
+      <app-sprite class="icon" [rows]="status() === 'running' ? icons['pause'] : icons['play']" />
+    </button>
+    <button
+      class="ctrl px"
+      (click)="brew.skip()"
+      [disabled]="status() === 'idle' && !brew.pendingBreak()"
+      [attr.aria-label]="onBreak() ? 'Skip break' : 'Finish early'"
+      [title]="onBreak() ? 'Skip break (S)' : 'Finish early (S)'"
+    >
+      <app-sprite class="icon" [rows]="icons['skip']" />
+    </button>
+  </div>
+
+  @if (brew.stats(); as stats) {
+    <p class="today">
+      <span>Today <b>{{ stats.today.sessions | plural: 'brew' }}</b></span>
+      <span><b>{{ stats.today.minutes | minutes }}</b> focused</span>
+      <span>🔥 <b>{{ stats.streak | plural: 'day' }}</b></span>
+    </p>
+  }
+</section>

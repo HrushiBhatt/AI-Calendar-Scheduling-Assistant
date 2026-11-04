@@ -44,6 +44,7 @@ type Manager struct {
 	db     *gorm.DB
 }
 
+// NewManager returns a session manager that signs with secret and stores sessions in db.
 func NewManager(secret []byte, secureCookies bool, db *gorm.DB) *Manager {
 	return &Manager{secret: secret, secure: secureCookies, db: db}
 }
@@ -51,6 +52,7 @@ func NewManager(secret []byte, secureCookies bool, db *gorm.DB) *Manager {
 // Secure reports whether the app is served over HTTPS.
 func (m *Manager) Secure() bool { return m.secure }
 
+// cookie is the session cookie's name, which takes a stricter prefix over HTTPS.
 func (m *Manager) cookie() string {
 	if m.secure {
 		return secureCookieName
@@ -62,6 +64,7 @@ func (m *Manager) cookie() string {
 // spending every CPU and stalling the timers and event streams.
 var hashSlots = make(chan struct{}, runtime.GOMAXPROCS(0))
 
+// hashSlot waits for a free slot and returns the function that gives it back.
 func hashSlot() (release func()) {
 	hashSlots <- struct{}{}
 	return func() { <-hashSlots }
@@ -153,6 +156,7 @@ func (m *Manager) RevokeSessions(userID uint, keep string) error {
 	return m.db.Where("user_id = ? AND id <> ?", userID, keep).Delete(&store.LoginSession{}).Error
 }
 
+// revoke ends one session by deleting its row.
 func (m *Manager) revoke(sessionID string) error {
 	return m.db.Where("id = ?", sessionID).Delete(&store.LoginSession{}).Error
 }
@@ -230,6 +234,7 @@ func SessionID(c *gin.Context) string {
 	return c.MustGet(sessionKey).(string)
 }
 
+// unauthorized stops the request with a 401, which sends the app back to the login page.
 func unauthorized(c *gin.Context) {
 	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "please log in"})
 }

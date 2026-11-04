@@ -8,33 +8,23 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
-import { filter, map } from 'rxjs';
-import { AssistantBar } from './calendar/assistant-bar';
-import { Auth } from './core/auth';
-import { Brew } from './core/brew';
-import { LiveEvents } from './core/live';
-import { Theme } from './core/theme';
-import { Toasts } from './core/toast';
-import { BreathingDialog } from './dialogs/breathing-dialog';
-import { IntentionDialog } from './dialogs/intention-dialog';
-import { ReflectionDialog } from './dialogs/reflection-dialog';
-import { SettingsDialog } from './dialogs/settings-dialog';
-import { Icon, IconName } from './shared/icon';
-import { MiniTimer } from './shared/mini-timer';
-import { StartingBanner } from './shared/starting-banner';
-import { ThemeToggle } from './shared/theme-toggle';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Auth } from './core/auth/auth';
+import { Brew } from './core/state/brew';
+import { LiveEvents } from './core/api/live';
+import { ICONS } from './shared/pixel-art/sprites';
+import { Toasts } from './core/state/toast';
+import { Theme } from './core/theme/theme';
+import { BreathingDialog } from './features/focus-flow/breathing-dialog';
+import { IntentionDialog } from './features/focus-flow/intention-dialog';
+import { ReflectionDialog } from './features/focus-flow/reflection-dialog';
+import { SettingsDialog } from './features/settings/settings-dialog';
+import { Sprite } from './shared/pixel-art/sprite';
 
-const NAV: { path: string; label: string; icon: IconName }[] = [
-  { path: '/calendar', label: 'Calendar', icon: 'calendar' },
-  { path: '/focus', label: 'Focus', icon: 'mug' },
-  { path: '/progress', label: 'Progress', icon: 'chart' },
-];
-
+/** The page frame: the header on every signed-in page, the routed page, and the dialogs. */
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, AssistantBar, Icon, MiniTimer, StartingBanner, ThemeToggle, IntentionDialog, BreathingDialog, ReflectionDialog, SettingsDialog],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Sprite, IntentionDialog, BreathingDialog, ReflectionDialog, SettingsDialog],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './app.html',
   styleUrl: './app.css',
@@ -44,30 +34,13 @@ export class App {
   protected readonly brew = inject(Brew);
   protected readonly live = inject(LiveEvents);
   protected readonly toasts = inject(Toasts);
-  private readonly router = inject(Router);
-  protected readonly nav = NAV;
+  protected readonly theme = inject(Theme); // applies the saved theme as the app starts
+  protected readonly gear = ICONS['gear'];
+  protected readonly sun = ICONS['sun'];
+  protected readonly moon = ICONS['moon'];
   private readonly toast = viewChild.required<ElementRef<HTMLElement>>('toast');
 
-  private readonly url = toSignal(
-    this.router.events.pipe(
-      filter((e) => e instanceof NavigationEnd),
-      map(() => this.router.url),
-    ),
-    { initialValue: this.router.url },
-  );
-  /** Which tab is open, for the thumb that glides to it. The plan screen belongs to the calendar. */
-  protected readonly activeIndex = computed(() => {
-    const path = this.url().split(/[?#]/)[0];
-    return NAV.findIndex((n) => n.path === (path === '/plan' ? '/calendar' : path));
-  });
-  protected readonly focusing = computed(() => {
-    const { status, phase } = this.brew.timer.state();
-    return status === 'running' && phase === 'focus';
-  });
-
   constructor() {
-    inject(Theme); // applies the choice and follows the system from the moment the app starts
-
     // Signing in opens the live stream and loads the account; signing out tears it down.
     const userId = computed(() => this.auth.user()?.id);
     effect(() => {
@@ -82,10 +55,5 @@ export class App {
       if (el.matches(':popover-open')) el.hidePopover();
       el.showPopover();
     });
-  }
-
-  protected openSettings(): void {
-    this.brew.settingsTab.set('general');
-    this.brew.dialog.set('settings');
   }
 }

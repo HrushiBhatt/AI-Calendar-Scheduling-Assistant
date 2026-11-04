@@ -17,42 +17,25 @@ import (
 
 const stateLifetime = 10 * time.Minute
 
-// stateFlow is one OAuth flow's cookie. Each has its own path and MAC label, so a state
-// issued to connect a calendar can't be replayed to sign in, or the other way round.
-type stateFlow struct{ cookie, path, label string }
-
-var (
-	calendarFlow = stateFlow{"bf_oauth_state", "/api/calendar", "oauth-state:"}
-	loginFlow    = stateFlow{"bf_login_state", "/api/auth/google", "login-state:"}
+// The sign-in state cookie: scoped to the Google routes, with its own MAC label so it can't be
+// mistaken for a session token.
+const (
+	stateCookie = "bf_login_state"
+	statePath   = "/api/auth/google"
+	stateLabel  = "login-state:"
 )
-
-// IssueState starts an OAuth flow for userID. It returns a random state for the
-// provider's redirect and stores it in a short-lived cookie signed with the session key
-// and bound to the user. A state that is random but not bound to the user would let an
-// attacker finish their own consent flow in a victim's browser and attach their calendar
-// to the victim's account.
-func (m *Manager) IssueState(c *gin.Context, userID uint) (string, error) {
-	return m.issue(c, calendarFlow, userID)
-}
-
-// CheckState verifies the provider's returned state against the cookie and the signed-in
-// user, then clears the cookie so a state can be used once.
-func (m *Manager) CheckState(c *gin.Context, userID uint, state string) bool {
-	owner, ok := m.check(c, calendarFlow, state)
-	return ok && owner == userID
-}
 
 // IssueLoginState starts a sign-in. The cookie ties the flow to this browser, so an
 // attacker can't send a victim to the callback with the attacker's own code and sign them
 // in to the attacker's account (login CSRF). linkTo is 0 for a sign-in, or the signed-in
 // user who is adding this sign-in method to their account.
 func (m *Manager) IssueLoginState(c *gin.Context, linkTo uint) (string, error) {
-	return m.issue(c, loginFlow, linkTo)
+	return m.issue(c, linkTo)
 }
 
 // CheckLoginState verifies a sign-in's state and returns who it was started for.
 func (m *Manager) CheckLoginState(c *gin.Context, state string) (linkTo uint, ok bool) {
-	return m.check(c, loginFlow, state)
+	return m.check(c, state)
 }
 
 // Derive computes a per-flow secret from the state: the PKCE verifier and the OIDC nonce.
@@ -64,7 +47,8 @@ func (m *Manager) Derive(purpose, state string) string {
 	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
 }
 
-func (m *Manager) issue(c *gin.Context, flow stateFlow, owner uint) (string, error) {
+// issue creates a random state and stores it, signed and bound to owner, in a short-lived cookie.
+func (m *Manager) issue(c *gin.Context, owner uint) (string, error) {
 	nonce := make([]byte, 24)
 	if _, err := rand.Read(nonce); err != nil {
 		return "", err
@@ -72,14 +56,15 @@ func (m *Manager) issue(c *gin.Context, flow stateFlow, owner uint) (string, err
 	state := base64.RawURLEncoding.EncodeToString(nonce)
 	payload := fmt.Sprintf("%d.%d.%s", owner, time.Now().Add(stateLifetime).Unix(), state)
 	c.SetSameSite(http.SameSiteLaxMode) // Lax: the cookie must come back on Google's top-level redirect
-	c.SetCookie(flow.cookie, payload+"."+m.mac(flow, payload), int(stateLifetime.Seconds()), flow.path, "", m.secure, true)
+	c.SetCookie(stateCookie, payload+"."+m.mac(payload), int(stateLifetime.Seconds()), statePath, "", m.secure, true)
 	return state, nil
 }
 
-func (m *Manager) check(c *gin.Context, flow stateFlow, state string) (owner uint, ok bool) {
-	raw, err := c.Cookie(flow.cookie)
+// check verifies the returned state against the cookie, then clears it so a state works only once.
+func (m *Manager) check(c *gin.Context, state string) (owner uint, ok bool) {
+	raw, err := c.Cookie(stateCookie)
 	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie(flow.cookie, "", -1, flow.path, "", m.secure, true)
+	c.SetCookie(stateCookie, "", -1, statePath, "", m.secure, true)
 	if err != nil || state == "" {
 		return 0, false
 	}
@@ -88,7 +73,7 @@ func (m *Manager) check(c *gin.Context, flow stateFlow, state string) (owner uin
 		return 0, false
 	}
 	payload, sig := raw[:i], raw[i+1:]
-	if !hmac.Equal([]byte(sig), []byte(m.mac(flow, payload))) {
+	if !hmac.Equal([]byte(sig), []byte(m.mac(payload))) {
 		return 0, false
 	}
 	parts := strings.SplitN(payload, ".", 3)
@@ -106,8 +91,9 @@ func (m *Manager) check(c *gin.Context, flow stateFlow, state string) (owner uin
 	return uint(id), true
 }
 
-func (m *Manager) mac(flow stateFlow, payload string) string {
+// mac signs a state cookie's contents with the session key.
+func (m *Manager) mac(payload string) string {
 	h := hmac.New(sha256.New, m.secret)
-	h.Write([]byte(flow.label + payload)) // domain-separated from the session JWT and other flows
+	h.Write([]byte(stateLabel + payload)) // domain-separated from the session JWT
 	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
 }

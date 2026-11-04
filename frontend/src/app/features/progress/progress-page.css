@@ -1,0 +1,107 @@
+/* The progress page: stat tiles across the top, then cards that share the full width. */
+
+:host {
+  display: grid;
+  gap: 28px;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  :host {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tiles,
+  .wide {
+    grid-column: 1 / -1;
+  }
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+@media (min-width: 720px) {
+  .tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.tile {
+  display: grid;
+  gap: 8px;
+  margin: 3px;
+  padding: 16px;
+  background: var(--surface);
+}
+
+.tile-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.tile-value {
+  font-family: var(--font-pixel);
+  font-size: clamp(0.75rem, 2.8vw, 1.05rem);
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.tile-sub {
+  font-size: 0.75rem;
+  color: var(--text-4);
+}
+
+.journal {
+  display: grid;
+  gap: 12px;
+  max-height: 520px;
+  padding-right: 6px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.entry {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border-left: 4px solid var(--accent);
+}
+
+.entry.early {
+  border-left-color: var(--line-2);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+
+.mins {
+  font-family: var(--font-pixel);
+  font-size: 0.5rem;
+  color: var(--accent-bright);
+}
+
+.entry p {
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.entry .task {
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+
+.reflection {
+  color: var(--text-2);
+}

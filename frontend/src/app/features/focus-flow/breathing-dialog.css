@@ -1,0 +1,81 @@
+/* The box-breathing guide shown before a focus block. */
+
+.breath {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 12px 0;
+}
+
+.breath-box {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 150px;
+  height: 150px;
+  margin-bottom: 8px;
+  box-shadow: inset 0 0 0 3px var(--line-2);
+}
+
+.breath-fill {
+  width: 100%;
+  height: 100%;
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 3px var(--accent);
+  animation: breath-fill 16s linear infinite;
+}
+
+.breath-dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: var(--accent-bright);
+  box-shadow: 0 0 12px var(--accent-glow);
+  animation: breath-trace 16s linear infinite;
+}
+
+.breath-cue {
+  font-family: var(--font-pixel);
+  font-size: 0.75rem;
+  color: var(--accent-bright);
+}
+
+.breath-count {
+  font-family: var(--font-pixel);
+  font-size: 1.5rem;
+}
+
+/* Box breathing: inhale (grow) → hold → exhale (shrink) → hold, 4 s each. */
+@keyframes breath-fill {
+  0%,
+  100% {
+    transform: scale(0.3);
+  }
+  25%,
+  50% {
+    transform: scale(1);
+  }
+  75% {
+    transform: scale(0.3);
+  }
+}
+
+@keyframes breath-trace {
+  0%,
+  100% {
+    left: -5px;
+    top: -5px;
+  }
+  25% {
+    left: calc(100% - 7px);
+    top: -5px;
+  }
+  50% {
+    left: calc(100% - 7px);
+    top: calc(100% - 7px);
+  }
+  75% {
+    left: -5px;
+    top: calc(100% - 7px);
+  }
+}

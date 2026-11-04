@@ -1,0 +1,116 @@
+/* The task list: the add form, then one row per task with its progress beans. */
+
+.count {
+  font-size: 0.45rem;
+  color: var(--text-3);
+}
+
+.task-form {
+  display: grid;
+  grid-template-columns: 1fr 58px auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.task-list {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+}
+
+.task {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: var(--surface-2);
+  border-left: 3px solid transparent;
+}
+
+.task.selected {
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+}
+
+.task-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.task-title {
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.is-done .task-title {
+  color: var(--text-4);
+  text-decoration: line-through;
+}
+
+.task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+
+.beans {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.beans i {
+  width: 8px;
+  height: 10px;
+  background: var(--line);
+}
+
+.beans i.full {
+  background: var(--accent);
+}
+
+.beans i.over {
+  background: var(--danger);
+}
+
+.check-box {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.done {
+  margin-top: 16px;
+  border-top: 2px dashed var(--line);
+}
+
+.done summary {
+  padding: 12px 0;
+  font-size: 0.85rem;
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.brew-btn {
+  --bd: var(--accent);
+  --lift: 5px;
+  --drop: var(--coffee-dark);
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  color: var(--bg);
+  background: var(--accent);
+  transition: transform 0.12s;
+}
+
+.brew-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}

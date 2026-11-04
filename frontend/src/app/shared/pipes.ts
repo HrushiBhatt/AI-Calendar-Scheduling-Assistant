@@ -1,5 +1,5 @@
 import { Pipe, PipeTransform } from '@angular/core';
-import { formatMinutes, plural } from '../core/time';
+import { formatMinutes, plural } from '../core/state/time';
 
 /** 135 → "2h 15m" */
 @Pipe({ name: 'minutes' })

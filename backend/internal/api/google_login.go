@@ -1,5 +1,8 @@
 package api
 
+// Sign-in with Google. Accounts are matched on Google's permanent subject ID, never on email,
+// because an email address can change hands.
+
 import (
 	"context"
 	"errors"
@@ -7,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
@@ -16,6 +20,9 @@ import (
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/demo"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/store"
 )
+
+// providerTimeout bounds a call to Google, so a slow provider can't hold a request open.
+const providerTimeout = 30 * time.Second
 
 // authProviders tells the login page which sign-in buttons to show.
 func (h *handler) authProviders(c *gin.Context) {
@@ -41,6 +48,7 @@ func (h *handler) googleLink(c *gin.Context) {
 	h.startLogin(c, uid)
 }
 
+// startLogin redirects to Google. linkTo is 0 for a sign-in, or the user adding Google to their account.
 func (h *handler) startLogin(c *gin.Context, linkTo uint) {
 	if h.Login == nil {
 		notFound(c)

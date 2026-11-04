@@ -1,0 +1,74 @@
+@if (stats(); as s) {
+  <div class="tiles">
+    <div class="tile px">
+      <span class="tile-label"><span aria-hidden="true">☕</span> Today</span>
+      <span class="tile-value">{{ s.today.minutes | minutes }}</span>
+      <span class="tile-sub">{{ s.today.sessions | plural: 'brew' }}</span>
+    </div>
+    <div class="tile px">
+      <span class="tile-label"><span aria-hidden="true">🔥</span> Streak</span>
+      <span class="tile-value">{{ s.streak | plural: 'day' }}</span>
+      <span class="tile-sub">Best: {{ s.best_streak | plural: 'day' }}</span>
+    </div>
+    <div class="tile px">
+      <span class="tile-label"><span aria-hidden="true">⏱️</span> All time</span>
+      <span class="tile-value">{{ s.total.minutes | minutes }}</span>
+      <span class="tile-sub">{{ s.total.sessions | plural: 'session' }}</span>
+    </div>
+    <div class="tile px">
+      <span class="tile-label"><span aria-hidden="true">🏆</span> Full brews</span>
+      <span class="tile-value">{{ s.total.completed }}</span>
+      <span class="tile-sub">ran all the way to 00:00</span>
+    </div>
+  </div>
+
+  <section class="panel px wide" aria-labelledby="heat-title">
+    <h2 class="panel-title" id="heat-title">Consistency</h2>
+    <app-heatmap [minutesByDay]="s.heatmap" />
+  </section>
+
+  <section class="panel px" aria-labelledby="cafe-title">
+    <h2 class="panel-title" id="cafe-title">Your café</h2>
+    <app-cafe-shelf [completed]="s.total.completed" />
+  </section>
+
+  <section class="panel px" aria-labelledby="journal-title">
+    <h2 class="panel-title" id="journal-title">Brew journal</h2>
+    @if (journal.value(); as sessions) {
+      <ol class="journal">
+        @for (entry of sessions; track entry.id) {
+          <li class="entry" [class.early]="!entry.completed">
+            <div class="meta">
+              <time [attr.datetime]="entry.created_at">{{ entry.created_at | date: 'EEE, MMM d, h:mm a' }}</time>
+              <span>{{ entry.mode }}</span>
+              <span class="mins">{{ round(entry.focused / 60) | minutes }}</span>
+              @if (!entry.completed) {
+                <span>ended early</span>
+              }
+              @if (entry.distractions) {
+                <span>{{ entry.distractions | plural: 'distraction' }}</span>
+              }
+            </div>
+            @if (taskTitle(entry.task_id); as title) {
+              <p class="task">▣ {{ title }}</p>
+            }
+            @if (entry.intention && entry.intention !== taskTitle(entry.task_id)) {
+              <p>🎯 {{ entry.intention }}</p>
+            }
+            @if (entry.reflection) {
+              <p class="reflection">✎ {{ entry.reflection }}</p>
+            }
+          </li>
+        } @empty {
+          <li class="empty">No brews yet. Finished sessions and your reflections land here.</li>
+        }
+      </ol>
+    } @else if (journal.error()) {
+      <p class="empty">Couldn't load the journal.</p>
+    } @else {
+      <p class="empty">Loading…</p>
+    }
+  </section>
+} @else {
+  <p class="empty">Loading your stats…</p>
+}

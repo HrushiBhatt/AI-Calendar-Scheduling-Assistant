@@ -32,6 +32,7 @@ type Hub struct {
 // Buffer is how many undelivered events a client may fall behind by before it is disconnected.
 const Buffer = 16
 
+// NewHub returns a hub. Nothing is delivered until Run is started.
 func NewHub() *Hub {
 	return &Hub{
 		subscribe:   make(chan subscription),

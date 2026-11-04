@@ -1,0 +1,54 @@
+/* The year grid, drawn as SVG, with its legend. */
+
+.scroll {
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+/* Fills the card on a wide screen; on a phone it keeps its size and scrolls instead. */
+svg {
+  display: block;
+  width: 100%;
+  min-width: 720px;
+  height: auto;
+}
+
+text {
+  font-family: var(--font-main);
+  font-size: 9px;
+  fill: var(--text-4);
+}
+
+rect:hover {
+  stroke: var(--text);
+  stroke-width: 1.5;
+}
+
+.heat-0 { fill: var(--heat-0); background: var(--heat-0); }
+.heat-1 { fill: var(--heat-1); background: var(--heat-1); }
+.heat-2 { fill: var(--heat-2); background: var(--heat-2); }
+.heat-3 { fill: var(--heat-3); background: var(--heat-3); }
+.heat-4 { fill: var(--heat-4); background: var(--heat-4); }
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--text-3);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+}
+
+.swatch {
+  width: 11px;
+  height: 11px;
+}

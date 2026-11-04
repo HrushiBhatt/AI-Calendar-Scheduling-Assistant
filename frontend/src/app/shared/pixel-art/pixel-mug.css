@@ -1,0 +1,122 @@
+/* The mug: pixel art, so its own colors stay the same in both themes. */
+
+:host {
+  position: relative;
+  display: block;
+  width: min(100%, clamp(300px, 46vh, 460px));
+  aspect-ratio: 200 / 220;
+}
+
+.mug-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 14px 34px var(--mug-shadow));
+  transition: transform 0.3s var(--ease-out);
+}
+
+:host(:hover) .mug-svg {
+  transform: scale(1.02);
+}
+
+.mug-glow {
+  position: absolute;
+  top: 53%;
+  left: 46%;
+  width: 60%;
+  aspect-ratio: 1;
+  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+  border-radius: 50%;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.5s var(--ease-out);
+  pointer-events: none;
+}
+
+:host(.is-running) .mug-glow {
+  opacity: 1;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+:host(.is-break) .mug-glow {
+  background: radial-gradient(circle, var(--break-soft) 0%, transparent 70%);
+}
+
+.steam {
+  position: absolute;
+  color: var(--steam);
+  top: 1%;
+  left: 46%;
+  width: 26%;
+  opacity: 0;
+  transform: translateX(-50%);
+  transition: opacity 0.5s var(--ease-out);
+  pointer-events: none;
+}
+
+:host(.is-running) .steam {
+  opacity: 1;
+}
+
+.steam g {
+  animation: steam-rise 2s ease-out infinite;
+}
+
+.steam g:nth-child(2) {
+  animation-delay: 0.4s;
+}
+
+.steam g:nth-child(3) {
+  animation-delay: 0.8s;
+}
+
+.mug-readout {
+  position: absolute;
+  top: 53%;
+  left: 46%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+:host(.is-celebrating) .mug-svg {
+  animation: celebrate 0.3s var(--ease-spring) 4;
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+}
+
+@keyframes steam-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes celebrate {
+  0%,
+  100% {
+    transform: scale(1) rotate(0);
+  }
+  25% {
+    transform: scale(1.1) rotate(-5deg);
+  }
+  75% {
+    transform: scale(1.1) rotate(5deg);
+  }
+}

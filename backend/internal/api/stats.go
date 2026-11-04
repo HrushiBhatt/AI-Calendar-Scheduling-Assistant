@@ -1,5 +1,7 @@
 package api
 
+// Progress numbers: today, streaks, totals and the year heatmap.
+
 import (
 	"maps"
 	"net/http"

@@ -1,136 +1,93 @@
 /* ========================================
-   BREW FOCUS: espresso and crema, with one pixel mug
+   BREW FOCUS: pixel art on pure black (or warm paper in light mode)
    ======================================== */
 
-@property --spin {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
-
 :root {
-  --bg: #0b1320;
-  --veil: rgba(8, 14, 26, 0.34);
-  --veil-focus: rgba(8, 14, 26, 0.58);
+  /* Surfaces, from the page up. */
+  --bg: #000;
+  --surface: #111;
+  --surface-2: #161616;
+  --surface-3: #1a1a1a;
+  --line: #2c2c2c;
+  --line-2: #3a3a3a;
 
-  /* Liquid glass: three strengths over the photograph. Text on them was checked at 4.5:1 or
-     better against the photo's darkest and brightest regions, so keep that if these change. */
-  --glass-fill: rgba(13, 19, 30, 0.72);
-  --glass-thin: rgba(13, 19, 30, 0.52);
-  --glass-strong: rgba(14, 20, 32, 0.88);
-  --glass-moving: rgba(13, 19, 30, 0.88);
-  --glass-edge: rgba(255, 255, 255, 0.18);
-  --glass-shine: rgba(255, 255, 255, 0.22);
-  --glass-sheen: rgba(255, 255, 255, 0.07);
-  --glass-shadow: rgba(3, 8, 18, 0.38);
+  /* Text, from strongest to faintest. All of it reads at 4.5:1 or better on the surfaces. */
+  --text: #efebe9;
+  --text-soft: #d7ccc8;
+  --text-2: #bdbdbd;
+  --text-3: #a3a3a3;
+  --text-4: #8a8a8a;
 
-  --surface-2: rgba(255, 255, 255, 0.07);
-  --surface-3: rgba(255, 255, 255, 0.13);
-  --line: rgba(255, 255, 255, 0.12);
-  --line-2: rgba(255, 255, 255, 0.24);
-
-  --text: #f6f8fb;
-  --text-2: #cfd6df;
-  --text-3: #b0b9c4;
-
-  --accent: #f0b878;
-  --accent-text: #ffd9a8;
-  --accent-ink: #1d1209;
-  --grad: linear-gradient(180deg, #ffd9a8, #efb272);
-  --grad-break: linear-gradient(180deg, #b4e6c0, #8fd19e);
-  --fill: #efb272;
-  --accent-soft: rgba(240, 184, 120, 0.16);
-  --accent-glow: rgba(240, 184, 120, 0.4);
-  --meeting: #a6c2ec;
-  --meeting-soft: rgba(166, 194, 236, 0.2);
-  --break: #9ae3b0;
-  --break-soft: rgba(154, 227, 176, 0.16);
-  --danger: #ff9080;
-  --danger-soft: rgba(255, 144, 128, 0.18);
-
-  --heat-0: rgba(255, 255, 255, 0.08);
-  --heat-1: #5f4c38;
-  --heat-2: #936f45;
-  --heat-3: #cb985c;
-  --heat-4: #ffd9a8;
-
-  --workday: rgba(255, 255, 255, 0.02);
-  --shimmer: rgba(255, 217, 168, 0.3);
-  --backdrop: rgba(5, 10, 20, 0.5);
+  /* The mug's coffee: pixel art, so it's the same in both themes. */
+  --coffee-dark: #3e2723;
+  --coffee: #5d4037;
+  --coffee-light: #8d6e63;
   --steam: #fff;
-  --locked: rgba(255, 255, 255, 0.16);
-  --btn: rgba(255, 255, 255, 0.1);
-  --thumb: rgba(255, 255, 255, 0.16);
-  --thumb-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 2px 10px rgba(3, 8, 18, 0.3);
-  --chip-shadow: rgba(3, 8, 18, 0.42);
-  --mug-shadow: rgba(3, 8, 18, 0.6);
+  --mug-shadow: rgba(0, 0, 0, 0.8);
 
-  --radius: 20px;
-  --radius-sm: 11px;
-  --radius-xs: 8px;
-  --shadow: 0 18px 50px var(--glass-shadow);
+  --accent: #d4a574;
+  --accent-bright: #e8c49a;
+  --accent-glow: rgba(212, 165, 116, 0.4);
+  --accent-soft: rgba(212, 165, 116, 0.1);
+  --break: #8fd19e;
+  --break-dim: #2e5e3a;
+  --break-soft: rgba(143, 209, 158, 0.25);
+  --danger: #ef5350;
+  --danger-dim: #5c2322;
+  --backdrop: rgba(0, 0, 0, 0.85);
+
+  /* The heatmap, from no focus to a lot. */
+  --heat-0: #1a1a1a;
+  --heat-1: #3e2723;
+  --heat-2: #6f4e37;
+  --heat-3: #a67c52;
+  --heat-4: #e8c49a;
+
+  /* Every page uses the full width, with this margin either side. */
+  --gutter: clamp(16px, 2.4vw, 40px);
 
   --font-main: 'Outfit', system-ui, -apple-system, sans-serif;
   --font-pixel: 'Press Start 2P', ui-monospace, monospace;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   color-scheme: dark;
 }
 
-/* The same photograph by day: white glass and dark ink. A new color goes in both blocks. */
+/* Light mode: the same layout on warm paper. A new color goes in both blocks. */
 :root[data-theme='light'] {
-  --bg: #dbe9f6;
-  --veil: rgba(255, 255, 255, 0.14);
-  --veil-focus: rgba(255, 255, 255, 0.36);
+  --bg: #f7f1e8;
+  --surface: #fffdf9;
+  --surface-2: #f5eee3;
+  --surface-3: #e9dfd0;
+  --line: #d9ccb9;
+  --line-2: #c4b49e;
 
-  --glass-fill: rgba(255, 255, 255, 0.72);
-  --glass-thin: rgba(255, 255, 255, 0.58);
-  --glass-strong: rgba(255, 255, 255, 0.92);
-  --glass-moving: rgba(255, 255, 255, 0.9);
-  --glass-edge: rgba(255, 255, 255, 0.78);
-  --glass-shine: rgba(255, 255, 255, 0.9);
-  --glass-sheen: rgba(255, 255, 255, 0.35);
-  --glass-shadow: rgba(25, 45, 80, 0.16);
+  --text: #2a1e14;
+  --text-soft: #3b2f24;
+  --text-2: #4f4235;
+  --text-3: #5a4c3f;
+  --text-4: #71634f;
 
-  --surface-2: rgba(20, 35, 60, 0.055);
-  --surface-3: rgba(20, 35, 60, 0.1);
-  --line: rgba(20, 35, 60, 0.12);
-  --line-2: rgba(20, 35, 60, 0.22);
+  --steam: #8d7c69;
+  --mug-shadow: rgba(60, 38, 18, 0.25);
 
-  --text: #12202f;
-  --text-2: #2b3848;
-  --text-3: #3c4856;
+  --accent: #9a5b1c;
+  --accent-bright: #7d4810;
+  --accent-glow: rgba(154, 91, 28, 0.3);
+  --accent-soft: rgba(154, 91, 28, 0.12);
+  --break: #27763f;
+  --break-dim: #9ec9aa;
+  --break-soft: rgba(39, 118, 63, 0.18);
+  --danger: #bb3626;
+  --danger-dim: #e3b0a8;
+  --backdrop: rgba(60, 42, 24, 0.45);
 
-  --accent: #a85f17;
-  --accent-text: #6e3d06;
-  --grad: linear-gradient(180deg, #f6cc9a, #e6a964);
-  --fill: #e9b072;
-  --accent-soft: rgba(168, 95, 23, 0.14);
-  --accent-glow: rgba(168, 95, 23, 0.3);
-  --meeting: #2b5a99;
-  --meeting-soft: rgba(43, 90, 153, 0.14);
-  --break: #145e33;
-  --break-soft: rgba(20, 94, 51, 0.12);
-  --danger: #982414;
-  --danger-soft: rgba(152, 36, 20, 0.12);
-
-  --heat-0: rgba(20, 35, 60, 0.08);
-  --heat-1: #ecd3b0;
-  --heat-2: #dcae74;
-  --heat-3: #b47a3b;
-  --heat-4: #6f4517;
-
-  --workday: rgba(20, 35, 60, 0.02);
-  --shimmer: rgba(168, 95, 23, 0.2);
-  --backdrop: rgba(30, 50, 80, 0.26);
-  --steam: #5f6f82;
-  --locked: rgba(20, 35, 60, 0.16);
-  --btn: rgba(255, 255, 255, 0.62);
-  --thumb: rgba(255, 255, 255, 0.92);
-  --thumb-shadow: inset 0 1px 0 #fff, 0 2px 8px rgba(25, 45, 80, 0.16);
-  --chip-shadow: rgba(25, 45, 80, 0.22);
-  --mug-shadow: rgba(25, 45, 80, 0.32);
+  --heat-0: #eee5d8;
+  --heat-1: #e6cda9;
+  --heat-2: #d3a66c;
+  --heat-3: #ab7236;
+  --heat-4: #6d4318;
 
   color-scheme: light;
 }
@@ -147,21 +104,16 @@
   display: none !important;
 }
 
-html {
-  background: var(--bg);
-}
-
 body {
   min-height: 100dvh;
   font-family: var(--font-main);
-  font-weight: 400;
   color: var(--text);
+  background: var(--bg) radial-gradient(var(--surface-3) 1px, transparent 1px) 0 0 / 24px 24px;
   -webkit-font-smoothing: antialiased;
 }
 
 button,
 input,
-select,
 textarea {
   font: inherit;
   color: inherit;
@@ -175,17 +127,12 @@ button {
 
 button:disabled {
   cursor: not-allowed;
-  opacity: 0.45;
+  opacity: 0.4;
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-ul,
-ol {
-  list-style: none;
+  outline: 2px dashed var(--accent);
+  outline-offset: 5px;
 }
 
 .sr-only {
@@ -197,150 +144,238 @@ ol {
   white-space: nowrap;
 }
 
-/* ---- glass ---------------------------------------------------------------- */
-
-.card,
-.glass {
-  background-color: var(--glass-fill);
-  background-image: linear-gradient(135deg, var(--glass-sheen), transparent 42%);
-  border: 1px solid var(--glass-edge);
-  box-shadow: inset 0 1px 0 var(--glass-shine), var(--shadow);
-  -webkit-backdrop-filter: blur(26px) saturate(170%);
-  backdrop-filter: blur(26px) saturate(170%);
+/* ---- pixel boxes ---------------------------------------------------------
+   Four offset hard shadows draw a 3px border with notched corners, the
+   classic 8-bit panel. --lift/--drop add a chunky drop shadow for buttons. */
+.px {
+  --bd: var(--line);
+  box-shadow:
+    0 -3px var(--bd),
+    0 3px var(--bd),
+    -3px 0 var(--bd),
+    3px 0 var(--bd),
+    0 var(--lift, 3px) var(--drop, transparent);
 }
 
-/* Lighter still, for the bars that float over everything. */
-.glass.thin {
-  background-color: var(--glass-thin);
-  -webkit-backdrop-filter: blur(18px) saturate(190%);
-  backdrop-filter: blur(18px) saturate(190%);
+.icon {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
-.card {
-  padding: 18px;
-  border-radius: var(--radius);
-  transition: background-color 0.35s ease;
-}
-
-.glass-round {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  color: var(--text);
-  border-radius: 50%;
-  text-decoration: none;
-  transition: transform 0.3s var(--ease-spring);
-}
-
-.glass-round:hover {
-  transform: scale(1.07);
-}
-
-.glass-round:active {
-  transform: scale(0.94);
-}
-
-.card-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 14px;
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.muted {
-  font-size: 0.8rem;
-  color: var(--text-3);
-}
-
-.empty {
-  padding: 18px 0;
-  font-size: 0.85rem;
-  text-align: center;
-  color: var(--text-3);
-}
-
-/* ---- buttons -------------------------------------------------------------- */
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 38px;
-  padding: 0 14px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text);
-  white-space: nowrap;
-  text-decoration: none;
-  background: var(--btn);
-  border: 1px solid var(--line-2);
-  border-radius: var(--radius-sm);
-  transition: background 0.2s, border-color 0.2s, box-shadow 0.25s, transform 0.25s var(--ease-spring);
-}
-
-.btn:hover:not(:disabled) {
-  border-color: var(--line-2);
-  transform: translateY(-1px);
-}
-
-.btn:active:not(:disabled) {
-  transform: scale(0.97);
-}
-
-.btn-primary {
-  font-weight: 600;
-  color: var(--accent-ink);
-  background: var(--grad);
-  border-color: transparent;
-}
-
-.btn-primary:hover:not(:disabled) {
-  border-color: transparent;
-  box-shadow: 0 6px 22px var(--accent-glow);
-}
-
-.btn-ghost {
-  background: transparent;
-}
-
-.btn-danger {
-  color: var(--danger);
-  background: transparent;
-  border-color: var(--danger-soft);
-}
-
-.btn-sm {
-  min-height: 32px;
-  padding: 0 11px;
-  font-size: 0.8rem;
+.icon-sm {
+  width: 12px;
+  height: 12px;
+  display: block;
 }
 
 .icon-btn {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  color: var(--text-2);
-  border-radius: var(--radius-xs);
-  transition: background 0.2s, color 0.2s, transform 0.25s var(--ease-spring);
+  width: 36px;
+  height: 36px;
+  color: var(--text-3);
+  transition: color 0.2s, transform 0.3s var(--ease-out);
 }
 
-.icon-btn:hover:not(:disabled) {
+.icon-btn:hover {
+  color: var(--text-soft);
+}
+
+/* ---- panels ------------------------------------------------------------- */
+
+.panel {
+  margin: 3px;
+  padding: 20px;
+  background: var(--surface);
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-family: var(--font-pixel);
+  font-size: 0.65rem;
+  line-height: 1.6;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.panel-note {
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--text-3);
+}
+
+.empty {
+  font-size: 0.9rem;
+  color: var(--text-4);
+}
+
+/* ---- buttons & form controls ---------------------------------------------- */
+
+.btn {
+  --bd: var(--line-2);
+  --lift: 7px;
+  --drop: var(--bg);
+  padding: 12px 18px;
+  font-weight: 600;
+  color: var(--text-soft);
+  background: var(--surface-3);
+  transition: transform 0.12s;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.btn:active:not(:disabled) {
+  --lift: 3px;
+  transform: translateY(3px);
+}
+
+.btn-primary {
+  --bd: var(--accent-bright);
+  --drop: var(--coffee-dark);
+  color: var(--bg);
+  background: var(--accent);
+}
+
+.btn-danger {
+  --bd: var(--danger-dim);
+  color: var(--danger);
+  background: transparent;
+}
+
+.btn-sm {
+  --lift: 5px;
+  padding: 7px 10px;
+  font-family: var(--font-pixel);
+  font-size: 0.5rem;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+
+.input {
+  --bd: var(--line-2);
+  width: 100%;
+  margin: 3px 0;
+  padding: 10px 12px;
   color: var(--text);
   background: var(--surface-3);
+  border: none;
+  outline: none;
+  resize: vertical;
 }
 
-.icon-btn:active:not(:disabled) {
-  transform: scale(0.9);
+.input:focus {
+  --bd: var(--accent);
+}
+
+.input[type='number'] {
+  font-family: var(--font-pixel);
+  font-size: 0.75rem;
+  text-align: center;
+  appearance: textfield;
+}
+
+.input::-webkit-inner-spin-button {
+  appearance: none;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.range {
+  width: 100%;
+  height: 8px;
+  appearance: none;
+  background: linear-gradient(to right, var(--accent) calc(var(--val) * 100%), var(--line) 0);
+  cursor: pointer;
+}
+
+.range::-webkit-slider-thumb {
+  width: 12px;
+  height: 18px;
+  appearance: none;
+  background: var(--text);
+  box-shadow: 0 3px 0 var(--coffee-dark);
+}
+
+.range::-moz-range-thumb {
+  width: 12px;
+  height: 18px;
+  background: var(--text);
+  border: none;
+  border-radius: 0;
+  box-shadow: 0 3px 0 var(--coffee-dark);
+}
+
+.range:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.switch {
+  position: relative;
+  width: 44px;
+  height: 22px;
+  appearance: none;
+  background: var(--line);
+  box-shadow: 0 0 0 3px var(--line-2);
+  cursor: pointer;
+}
+
+.switch::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: var(--text-3);
+  transition: transform 0.2s var(--ease-out);
+}
+
+.switch:checked {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bright);
+}
+
+.switch:checked::before {
+  transform: translateX(22px);
+  background: var(--bg);
+}
+
+kbd {
+  padding: 2px 6px;
+  font-family: var(--font-pixel);
+  font-size: 0.5rem;
+  background: var(--surface-3);
+  box-shadow: 0 2px 0 var(--line-2);
 }
 
 /* Google's light button, to its branding guidelines: white fill, a 1px #747775 border, 12px
-   of padding and 10px after the logo. It stays off the app's theme on purpose. */
+   of padding and 10px after the logo. It stays off the pixel theme on purpose. */
 .gbtn {
   display: inline-flex;
   align-items: center;
@@ -348,7 +383,7 @@ ol {
   gap: 10px;
   min-height: 40px;
   padding: 0 12px;
-  font-family: 'Google Sans', Roboto, Arial, sans-serif;
+  font-family: Roboto, Arial, sans-serif;
   font-size: 14px;
   font-weight: 500;
   line-height: 20px;
@@ -370,193 +405,11 @@ ol {
   width: 100%;
 }
 
-/* ---- form controls -------------------------------------------------------- */
-
-.field {
-  display: grid;
-  gap: 6px;
-  font-size: 0.8rem;
-  color: var(--text-2);
-}
-
-.input {
-  width: 100%;
-  min-height: 38px;
-  padding: 8px 11px;
-  font-size: 0.9rem;
-  color: var(--text);
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  outline: none;
-  resize: vertical;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.input::placeholder {
-  color: var(--text-3);
-}
-
-.input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-.input[type='number'] {
-  appearance: textfield;
-  text-align: center;
-}
-
-.input::-webkit-inner-spin-button {
-  appearance: none;
-}
-
-.check {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 0.85rem;
-  color: var(--text-2);
-  cursor: pointer;
-}
-
-.check input,
-input[type='checkbox'].tick {
-  flex: none;
-  width: 16px;
-  height: 16px;
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
-.range {
-  width: 100%;
-  height: 5px;
-  appearance: none;
-  background: linear-gradient(to right, var(--accent) calc(var(--val) * 100%), var(--surface-3) 0);
-  border-radius: 99px;
-  cursor: pointer;
-}
-
-.range::-webkit-slider-thumb {
-  width: 15px;
-  height: 15px;
-  appearance: none;
-  background: var(--text);
-  border-radius: 50%;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
-  transition: transform 0.2s var(--ease-spring);
-}
-
-.range:hover::-webkit-slider-thumb {
-  transform: scale(1.2);
-}
-
-.range::-moz-range-thumb {
-  width: 15px;
-  height: 15px;
-  background: var(--text);
-  border: none;
-  border-radius: 50%;
-}
-
-.range:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.switch {
-  position: relative;
-  flex: none;
-  width: 40px;
-  height: 24px;
-  appearance: none;
-  background: var(--surface-3);
-  border-radius: 99px;
-  box-shadow: inset 0 0 0 1px var(--line);
-  cursor: pointer;
-  transition: background 0.25s;
-}
-
-.switch::before {
-  content: '';
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 18px;
-  height: 18px;
-  background: var(--text-2);
-  border-radius: 50%;
-  transition: transform 0.3s var(--ease-spring), background 0.25s;
-}
-
-.switch:checked {
-  background: var(--fill);
-}
-
-.switch:checked::before {
-  background: var(--accent-ink);
-  transform: translateX(16px);
-}
-
-/* A row of options with a thumb that slides to the chosen one. Set --n and --i. */
-.segmented {
-  --n: 3;
-  --i: 0;
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
-  padding: 3px;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  isolation: isolate;
-}
-
-.segmented::before {
-  content: '';
-  position: absolute;
-  inset: 3px auto 3px 3px;
-  z-index: -1;
-  width: calc((100% - 6px) / var(--n));
-  background: var(--thumb);
-  border-radius: 8px;
-  box-shadow: var(--thumb-shadow);
-  transform: translateX(calc(var(--i) * 100%));
-  transition: transform 0.35s var(--ease-spring);
-}
-
-.segmented button {
-  min-height: 30px;
-  padding: 0 12px;
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--text-3);
-  white-space: nowrap;
-  transition: color 0.2s;
-}
-
-.segmented button:hover,
-.segmented button[aria-selected='true'],
-.segmented button[aria-checked='true'] {
-  color: var(--text);
-}
-
-kbd {
-  padding: 1px 6px;
-  font-family: var(--font-main);
-  font-size: 0.7rem;
-  color: var(--text-2);
-  background: var(--surface-3);
-  border: 1px solid var(--line-2);
-  border-radius: 5px;
-}
-
-/* ---- dialogs -------------------------------------------------------------- */
+/* ---- modal -------------------------------------------------------------- */
 
 .modal {
   width: 100%;
-  max-width: min(420px, calc(100vw - 32px));
+  max-width: min(460px, calc(100vw - 32px));
   margin: auto;
   overflow: visible;
   color: inherit;
@@ -566,41 +419,17 @@ kbd {
 
 .modal::backdrop {
   background: var(--backdrop);
-  backdrop-filter: blur(6px);
-  animation: fade 0.25s ease both;
+  backdrop-filter: blur(4px);
 }
 
 .modal-card {
-  padding: 22px;
-  background: var(--glass-strong);
-  border: 1px solid var(--glass-edge);
-  border-radius: var(--radius);
-  box-shadow: inset 0 1px 0 var(--glass-shine), var(--shadow);
-  -webkit-backdrop-filter: blur(30px) saturate(170%);
-  backdrop-filter: blur(30px) saturate(170%);
-  animation: pop 0.35s var(--ease-spring) both;
-}
-
-/* The settings panel slides in from the side. */
-.modal.sheet {
-  max-width: min(440px, 100vw);
-  height: 100dvh;
-  max-height: 100dvh;
-  margin: 0 0 0 auto;
-}
-
-.modal.sheet .modal-card {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  border-width: 0 0 0 1px;
-  border-radius: 0;
-  animation: sheet-in 0.4s var(--ease-out) both;
-}
-
-.modal.sheet .modal-body {
-  flex: 1;
-  min-height: 0;
+  --bd: var(--line-2);
+  margin: 3px;
+  max-height: calc(100dvh - 48px);
+  padding: 24px;
+  overflow-y: auto;
+  background: var(--surface);
+  animation: pop 0.25s var(--ease-out);
 }
 
 .modal-header {
@@ -608,247 +437,86 @@ kbd {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .modal-header h2 {
-  font-size: 1.1rem;
-  font-weight: 600;
+  font-family: var(--font-pixel);
+  font-size: 0.8rem;
+  line-height: 1.6;
 }
 
 .modal-body,
 .modal-form {
   display: grid;
-  gap: 16px;
+  gap: 20px;
 }
 
 .modal-actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 14px;
 }
 
-.form-error {
-  font-size: 0.82rem;
-  color: var(--danger);
+.setting {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 20px;
+  cursor: pointer;
 }
 
-/* ---- toast ---------------------------------------------------------------- */
+.setting .switch {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+}
+
+.setting-hint {
+  font-size: 0.75rem;
+  color: var(--text-3);
+}
+
+.shortcuts {
+  font-size: 0.8rem;
+  line-height: 2;
+  color: var(--text-3);
+}
+
+/* ---- toast -------------------------------------------------------------- */
 
 .toast {
+  --bd: var(--line-2);
   position: fixed;
-  inset: auto auto 26px 50%; /* undo the popover's default centering */
+  inset: auto auto 24px 50%; /* undo the popover's default centering */
+  margin: 0;
+  border: none;
+  color: var(--text);
   z-index: 50;
   max-width: calc(100vw - 32px);
-  margin: 0;
-  padding: 10px 16px;
-  font-size: 0.875rem;
-  color: var(--text);
-  background: var(--glass-strong);
-  border: 1px solid var(--glass-edge);
-  border-radius: 99px;
-  box-shadow: var(--shadow);
-  -webkit-backdrop-filter: blur(20px) saturate(170%);
-  backdrop-filter: blur(20px) saturate(170%);
+  padding: 12px 18px;
+  font-size: 0.9rem;
+  background: var(--surface-3);
   opacity: 0;
-  transform: translate(-50%, 24px) scale(0.96);
-  transition: opacity 0.25s, transform 0.4s var(--ease-spring);
+  transform: translate(-50%, 120px);
+  transition: all 0.3s var(--ease-out);
   pointer-events: none;
 }
 
 .toast.show {
   opacity: 1;
-  transform: translate(-50%, 0) scale(1);
+  transform: translate(-50%, 0);
 }
 
-/* A focus block fades what's around the timer. Only the contents fade: the glass stays whole,
-   because a faded card would let the sharp photograph show through its words. */
-.side .card > * {
-  transition: opacity 0.6s ease;
-}
-
-.focusing .side .card > * {
-  opacity: 0.35;
-}
-
-.focusing .side .card:hover > *,
-.focusing .side .card:focus-within > * {
-  opacity: 1;
-}
-
-/* ---- motion --------------------------------------------------------------- */
-
-/* Children rise in one after another. */
-.stagger > * {
-  animation: rise 0.5s var(--ease-out) both;
-}
-.stagger > :nth-child(2) { animation-delay: 60ms; }
-.stagger > :nth-child(3) { animation-delay: 120ms; }
-.stagger > :nth-child(4) { animation-delay: 180ms; }
-.stagger > :nth-child(5) { animation-delay: 240ms; }
-.stagger > :nth-child(n + 6) { animation-delay: 300ms; }
-
-@keyframes rise {
-  from { opacity: 0; transform: translateY(10px); }
-}
-
-@keyframes fade {
-  from { opacity: 0; }
-}
-
-@keyframes pop {
-  from { opacity: 0; transform: scale(0.95) translateY(8px); }
-}
-
-@keyframes sheet-in {
-  from { opacity: 0.4; transform: translateX(48px); }
-}
+/* ---- animation ------------------------------------------------------------ */
 
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-4px); }
 }
 
-@keyframes spin-border {
-  to { --spin: 360deg; }
-}
-
-/* ---- the photograph -------------------------------------------------------- */
-
-.photo {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: var(--bg) url('./assets/background/alps-1920.jpg') center / cover no-repeat;
-  pointer-events: none;
-}
-
-/* Big screens and sharp laptops get the full 4K image. The small blurred copy shows at once. */
-@media (min-width: 1280px), (min-width: 700px) and (min-resolution: 1.5dppx) {
-  .photo {
-    background-image: url('./assets/background/alps-4k.jpg'), url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QCARXhpZgAATU0AKgAAAAgABAEaAAUAAAABAAAAPgEbAAUAAAABAAAARgEoAAMAAAABAAIAAIdpAAQAAAABAAAATgAAAAAAAABIAAAAAQAAAEgAAAABAAOgAQADAAAAAQABAACgAgAEAAAAAQAAABigAwAEAAAAAQAAABAAAAAA/+0AOFBob3Rvc2hvcCAzLjAAOEJJTQQEAAAAAAAAOEJJTQQlAAAAAAAQ1B2M2Y8AsgTpgAmY7PhCfv/CABEIABAAGAMBIgACEQEDEQH/xAAfAAABBQEBAQEBAQAAAAAAAAADAgQBBQAGBwgJCgv/xADDEAABAwMCBAMEBgQHBgQIBnMBAgADEQQSIQUxEyIQBkFRMhRhcSMHgSCRQhWhUjOxJGIwFsFy0UOSNIII4VNAJWMXNfCTc6JQRLKD8SZUNmSUdMJg0oSjGHDiJ0U3ZbNVdaSVw4Xy00Z2gONHVma0CQoZGigpKjg5OkhJSldYWVpnaGlqd3h5eoaHiImKkJaXmJmaoKWmp6ipqrC1tre4ubrAxMXGx8jJytDU1dbX2Nna4OTl5ufo6erz9PX29/j5+v/EAB8BAAMBAQEBAQEBAQEAAAAAAAECAAMEBQYHCAkKC//EAMMRAAICAQMDAwIDBQIFAgQEhwEAAhEDEBIhBCAxQRMFMCIyURRABjMjYUIVcVI0gVAkkaFDsRYHYjVT8NElYMFE4XLxF4JjNnAmRVSSJ6LSCAkKGBkaKCkqNzg5OkZHSElKVVZXWFlaZGVmZ2hpanN0dXZ3eHl6gIOEhYaHiImKkJOUlZaXmJmaoKOkpaanqKmqsLKztLW2t7i5usDCw8TFxsfIycrQ09TV1tfY2drg4uPk5ebn6Onq8vP09fb3+Pn6/9sAQwAHBwcHBwcMBwcMEQwMDBEXERERERceFxcXFxceJB4eHh4eHiQkJCQkJCQkKysrKysrMjIyMjI4ODg4ODg4ODg4/9sAQwEJCQkODQ4ZDQ0ZOyghKDs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7/9oADAMBAAIRAxEAAAG3Eh1086DDY1//2gAIAQEAAQUCKEv6N0RXljIRRqaxUf/aAAgBAxEBPwH2I/k+zH8n/9oACAECEQE/Afel+aMsvzf/2gAIAQEABj8CfF41dJD2pR//xAAzEAEAAwACAgICAgMBAQAAAgsBEQAhMUFRYXGBkaGxwfDREOHxIDBAUGBwgJCgsMDQ4P/aAAgBAQABPyEWrYziHuwnkeLCtvMNkw0eYb3ynC83/9oADAMBAAIRAxEAABCIf//EADMRAQEBAAMAAQIFBQEBAAEBCQEAESExEEFRYSBx8JGBobHRweHxMEBQYHCAkKCwwNDg/9oACAEDEQE/ENWIz//aAAgBAhEBPxBA+Ug5n//aAAgBAQABPxAaGATp1RmDSR0yz7hHEDPG+a5go8bxJxR5JeYb5PEUxYzqRfjm/wD/2Q==');
-    background-size: cover, cover;
-    background-position: center, center;
-  }
-}
-
-.photo::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--veil);
-  transition: background 1.2s ease;
-}
-
-/* The mountains recede during a focus block. */
-.photo.focusing::after {
-  background: var(--veil-focus);
-}
-
-/* ---- moving between screens ------------------------------------------------ */
-
-/* Only the content moves: the photograph and the tab bar hold still. This name is set only
-   while moving, because a named element can't blur what's behind it, and that would turn every
-   card to plain tinted glass all the time. */
-html[data-nav] .content {
-  view-transition-name: page;
-}
-
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation: none;
-}
-
-::view-transition-group(page) {
-  animation: none;
-}
-
-::view-transition-image-pair(page) {
-  isolation: auto;
-}
-
-/* That also means no blur during the move, so glass goes more opaque for it and eases back when
-   it lands. That hides the moment the real blur returns. */
-html[data-nav] {
-  --glass-fill: var(--glass-moving);
-}
-
-html[data-nav='forward']::view-transition-old(page) {
-  animation: 240ms ease-in both page-out-left;
-}
-
-html[data-nav='forward']::view-transition-new(page) {
-  animation: 520ms var(--ease-out) both page-in-right;
-}
-
-html[data-nav='back']::view-transition-old(page) {
-  animation: 240ms ease-in both page-out-right;
-}
-
-html[data-nav='back']::view-transition-new(page) {
-  animation: 520ms var(--ease-out) both page-in-left;
-}
-
-/* A command opens its screen: the page sinks away and the new one unfolds from the bar above. */
-html[data-nav='ask']::view-transition-old(page) {
-  animation: 300ms ease-in both page-sink;
-}
-
-html[data-nav='ask']::view-transition-new(page) {
-  animation: 680ms var(--ease-out) both page-unfold;
-}
-
-@keyframes page-out-left {
-  to { opacity: 0; transform: translateX(-5%) scale(0.98); filter: blur(6px); }
-}
-
-@keyframes page-out-right {
-  to { opacity: 0; transform: translateX(5%) scale(0.98); filter: blur(6px); }
-}
-
-@keyframes page-in-right {
-  from { opacity: 0; transform: translateX(6%) scale(0.98); filter: blur(6px); }
-}
-
-@keyframes page-in-left {
-  from { opacity: 0; transform: translateX(-6%) scale(0.98); filter: blur(6px); }
-}
-
-@keyframes page-sink {
-  to { opacity: 0; transform: scale(0.94); filter: blur(8px); }
-}
-
-@keyframes page-unfold {
-  from {
-    opacity: 0;
-    clip-path: inset(0 26% 92% 26% round 28px);
-    transform: translateY(-14px);
-  }
-  to {
-    clip-path: inset(0 0 0 0 round 0);
-  }
-}
-
-@keyframes fade-out {
-  to { opacity: 0; }
-}
-
-/* Switching theme: the new one spreads out in a circle from where you clicked. */
-/* The reveal is the only animation: buttons fading their own colors would look washed out in it. */
-html.theme-reveal *,
-html.theme-reveal *::before,
-html.theme-reveal *::after {
-  transition: none !important;
-}
-
-html.theme-reveal::view-transition-new(root) {
-  animation: 700ms cubic-bezier(0.45, 0, 0.2, 1) both theme-reveal;
-}
-
-@keyframes theme-reveal {
-  from { clip-path: circle(0 at var(--reveal-x, 50%) var(--reveal-y, 50%)); }
-  to { clip-path: circle(150vmax at var(--reveal-x, 50%) var(--reveal-y, 50%)); }
+@keyframes pop {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -856,14 +524,7 @@ html.theme-reveal::view-transition-new(root) {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
-    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-  }
-
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*) {
-    animation: none !important;
   }
 }

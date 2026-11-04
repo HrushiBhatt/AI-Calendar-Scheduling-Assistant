@@ -1,69 +1,57 @@
-<div class="photo" [class.focusing]="focusing()" aria-hidden="true"></div>
-
-@if (live.isLocal) {
-  <p class="demo-banner glass thin">
-    Demo with sample data. It runs entirely in your browser, with a phrase matcher instead of Claude.
-    <a href="https://github.com/HrushiBhatt/AI-Calendar-Scheduling-Assistant" rel="noopener">Code</a>
-  </p>
-}
-
-@if (auth.user()) {
-  <header class="top">
-    <a class="logo glass thin glass-round" routerLink="/" aria-label="Brew Focus home">
-      <app-icon name="mug" />
-      <span class="logo-text">Brew Focus</span>
-    </a>
-
-    <nav class="tabs glass thin" aria-label="Main" [style.--i]="activeIndex()">
-      <span class="thumb" [class.off]="activeIndex() < 0" aria-hidden="true"></span>
-      @for (item of nav; track item.path; let i = $index) {
-        <a class="tab" [routerLink]="item.path" [class.active]="activeIndex() === i" [attr.aria-current]="activeIndex() === i ? 'page' : null">
-          <app-icon [name]="item.icon" />
-          <span>{{ item.label }}</span>
-        </a>
-      }
-    </nav>
-
-    <div class="tools">
-      <app-mini-timer [hidden]="activeIndex() === 1" />
-      @if (!live.connected()) {
-        <span class="offline" role="status" title="Reconnecting">Offline</span>
-      }
-      <app-theme-toggle class="theme" />
-      <button class="glass thin glass-round settings" (click)="openSettings()" aria-label="Settings">
-        <app-icon name="gear" />
-      </button>
-    </div>
-  </header>
-
-  @if (activeIndex() !== 1) {
-    <app-assistant-bar />
+<div class="app">
+  @if (live.isLocal) {
+    <p class="demo-banner px">
+      Demo with sample data. It runs entirely in your browser.
+      <a href="https://github.com/HrushiBhatt/AI-Calendar-Scheduling-Assistant" rel="noopener">Code</a>
+    </p>
   }
-}
 
-<main class="content">
+  @if (auth.user(); as user) {
+    <header class="header">
+      <a class="logo" routerLink="/">
+        <span class="logo-icon" aria-hidden="true">☕</span>
+        <span class="logo-text">Brew Focus</span>
+      </a>
+      <nav class="tabs" aria-label="Views">
+        <a class="tab px" routerLink="/" routerLinkActive="active" ariaCurrentWhenActive="page" [routerLinkActiveOptions]="{ exact: true }">Brew</a>
+        <a class="tab px" routerLink="/progress" routerLinkActive="active" ariaCurrentWhenActive="page">Progress</a>
+      </nav>
+      <div class="account">
+        <span
+          class="live"
+          [class.on]="live.connected()"
+          [title]="live.connected() ? 'Synced live with your other tabs and devices' : 'Reconnecting to the server…'"
+          >{{ live.connected() ? 'LIVE' : 'OFFLINE' }}</span
+        >
+        <span class="user" [title]="user.email">{{ user.name }}</span>
+        <button class="icon-btn head-btn px" (click)="theme.toggle()" [attr.aria-label]="theme.current() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'">
+          <app-sprite class="icon" [rows]="theme.current() === 'dark' ? sun : moon" />
+        </button>
+        <button class="icon-btn head-btn settings-btn px" (click)="brew.dialog.set('settings')" aria-label="Settings">
+          <app-sprite class="icon" [rows]="gear" />
+        </button>
+      </div>
+    </header>
+  }
+
   <router-outlet />
-</main>
 
-@if (auth.user()) {
-  <app-starting-banner />
-}
+  @switch (brew.dialog()) {
+    @case ('intention') {
+      <app-intention-dialog />
+    }
+    @case ('breathe') {
+      <app-breathing-dialog />
+    }
+    @case ('reflect') {
+      <app-reflection-dialog />
+    }
+    @case ('settings') {
+      <app-settings-dialog />
+    }
+  }
 
-@switch (brew.dialog()) {
-  @case ('intention') {
-    <app-intention-dialog />
-  }
-  @case ('breathe') {
-    <app-breathing-dialog />
-  }
-  @case ('reflect') {
-    <app-reflection-dialog />
-  }
-  @case ('settings') {
-    <app-settings-dialog />
-  }
-}
-
-<div #toast class="toast" popover="manual" [class.show]="toasts.current().visible" role="status" aria-live="polite">
-  {{ toasts.current().message }}
+  <div #toast class="toast px" popover="manual" [class.show]="toasts.current().visible" role="status" aria-live="polite">
+    {{ toasts.current().message }}
+  </div>
 </div>

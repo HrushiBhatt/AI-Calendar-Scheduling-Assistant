@@ -37,9 +37,7 @@ jobs:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
       - run: go vet ./...
-      - run: go vet -tags evals ./internal/assistant # the eval runner compiles, though CI never runs it
-      - run: go test -race ./... # the engine, hub, dispatcher and syncer are concurrent: always -race
-      # The Google and Anthropic SDKs bring a large dependency tree; check what's reachable.
+      - run: go test -race ./... # the engine and hub are concurrent: always -race
       - run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
       - run: go run github.com/securego/gosec/v2/cmd/gosec@v2.29.0 -quiet ./...
 
@@ -115,8 +113,8 @@ jobs:
         run: trivy image --scanners vuln --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 --timeout 10m brew-focus
 
   # The live site at https://hrushibhatt.github.io/<repo>/. Pages only serves static files, so
-  # this builds the app with its in-browser backend and the real scheduler as WebAssembly. It
-  # tests that build the way Pages serves it, and every push to main publishes it. The path
+  # this builds the app with its in-browser backend. It tests that build the way Pages serves
+  # it, and every push to main publishes it. The path
   # comes from the repo's name, so renaming the repo can't leave the site blank again.
   pages:
     needs: [secrets, frontend]
@@ -130,10 +128,6 @@ jobs:
       PAGES_BASE: /${{ github.event.repository.name }}/
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version-file: .nvmrc

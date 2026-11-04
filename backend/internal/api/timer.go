@@ -1,5 +1,8 @@
 package api
 
+// The timer over HTTP. The engine owns all timer state; these handlers only pass commands to
+// it, and the event stream carries what happens back to every open tab.
+
 import (
 	"encoding/json"
 	"errors"
@@ -31,6 +34,7 @@ type breakInput struct {
 // keepalive stops proxies from closing an idle event stream.
 const keepalive = 25 * time.Second
 
+// timer returns the user's current timer, or an idle one.
 func (h *handler) timer(c *gin.Context) {
 	c.JSON(http.StatusOK, h.Engine.Current(c.Request.Context(), auth.UserID(c)))
 }
@@ -118,6 +122,7 @@ func (h *handler) events(c *gin.Context) {
 	})
 }
 
+// eventOf builds an event for the hub.
 func eventOf(kind string, data any) events.Event {
 	return events.Event{Type: kind, Data: data}
 }

@@ -37,15 +37,9 @@ func TestStateChangingRequestsNeedTheCSRFToken(t *testing.T) {
 	if code := send(token); code != 201 {
 		t.Errorf("right token: %d, want 201", code)
 	}
-	// Reads need no token, and the webhook (outside the /api middleware) needs none either.
+	// Reads need no token.
 	if code := ada.call("GET", "/api/tasks", nil, nil); code != 200 {
 		t.Errorf("GET: %d", code)
-	}
-	req, _ := http.NewRequest("POST", ada.base+"/api/calendar/push", nil)
-	res, _ := http.DefaultClient.Do(req)
-	res.Body.Close()
-	if res.StatusCode != 200 {
-		t.Errorf("push: %d, want 200", res.StatusCode)
 	}
 }
 

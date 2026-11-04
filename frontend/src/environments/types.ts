@@ -1,6 +1,6 @@
 import type { HttpInterceptorFn } from '@angular/common/http';
 import type { Observable } from 'rxjs';
-import type { LiveEvent } from '../app/core/models';
+import type { LiveEvent } from '../app/core/api/models';
 
 export interface Environment {
   /** The backend runs in this browser (the GitHub Pages demo) instead of on the Go server. */
