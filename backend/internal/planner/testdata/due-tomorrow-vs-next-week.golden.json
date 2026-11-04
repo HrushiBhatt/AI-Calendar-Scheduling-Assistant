@@ -1,0 +1,52 @@
+{
+  "blocks": [
+    {
+      "task_id": 2,
+      "task": "Lab report",
+      "starts_at": "2026-10-26T09:00:00-04:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 2.849,
+      "explain": "due Tue Oct 27, so it goes early"
+    },
+    {
+      "task_id": 2,
+      "task": "Lab report",
+      "starts_at": "2026-10-26T09:30:00-04:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 3.833,
+      "explain": "due Tue Oct 27, so it goes early, and right next to your other block for this task"
+    },
+    {
+      "task_id": 1,
+      "task": "Grant proposal",
+      "starts_at": "2026-10-27T09:00:00-04:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 1.979,
+      "explain": "the earliest open slot that fits"
+    },
+    {
+      "task_id": 1,
+      "task": "Grant proposal",
+      "starts_at": "2026-10-27T09:30:00-04:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 2.968,
+      "explain": "right next to your other block for this task"
+    }
+  ],
+  "unplaced": [],
+  "notes": [
+    "modes: Pomodoro 25/5",
+    "history: cold start (0 past sessions), so every hour is weighted the same",
+    "day_full: 2026-10-26 (2 blocks, 50 focus minutes)",
+    "day_full: 2026-10-27 (2 blocks, 50 focus minutes)",
+    "placed: 4 blocks, 100 focus minutes"
+  ]
+}

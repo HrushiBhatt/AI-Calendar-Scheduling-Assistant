@@ -33,14 +33,60 @@
             @if (task.minutes) {
               <span>{{ task.minutes | minutes }}</span>
             }
+            @if (dueLabel(task); as due) {
+              <span class="due" [class.late]="due === 'overdue'">{{ due }}</span>
+            }
+            @if (task.priority) {
+              <span class="prio" [attr.aria-label]="priorities[task.priority] + ' priority'">{{ '!'.repeat(task.priority) }}</span>
+            }
+            @if (task.energy) {
+              <span class="energy">{{ task.energy }}</span>
+            }
           </span>
         </div>
         <button class="brew-btn px" (click)="brew.focusOn(task)" [disabled]="brew.busy()" [attr.aria-label]="'Focus on ' + task.title" title="Brew this task">
           <app-sprite class="icon-sm" [rows]="playIcon" />
         </button>
+        <button
+          class="icon-btn"
+          (click)="toggleDetails(task)"
+          [attr.aria-expanded]="editing() === task.id"
+          [attr.aria-controls]="'task-details-' + task.id"
+          [attr.aria-label]="'Planning details for ' + task.title"
+        >
+          <app-sprite class="icon-sm" [rows]="moreIcon" />
+        </button>
         <button class="icon-btn" (click)="brew.removeTask(task)" [attr.aria-label]="'Delete ' + task.title">
           <app-sprite class="icon-sm" [rows]="closeIcon" />
         </button>
+        @if (editing() === task.id) {
+          <div class="details" [id]="'task-details-' + task.id">
+            <label>
+              <span>Brews</span>
+              <input class="input px" type="number" min="1" max="20" [value]="task.estimate" (change)="setEstimate(task, $event)" />
+            </label>
+            <label>
+              <span>Due</span>
+              <input class="input px" type="date" [value]="dueValue(task)" (change)="setDue(task, $event)" />
+            </label>
+            <label>
+              <span>Priority</span>
+              <select class="input px" (change)="setPriority(task, $event)">
+                @for (p of priorities; track $index) {
+                  <option [value]="$index" [selected]="$index === task.priority">{{ p }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span>Energy</span>
+              <select class="input px" (change)="setEnergy(task, $event)">
+                <option value="" [selected]="!task.energy">Any time</option>
+                <option value="deep" [selected]="task.energy === 'deep'">Deep: my best hours</option>
+                <option value="light" [selected]="task.energy === 'light'">Light: fill the gaps</option>
+              </select>
+            </label>
+          </div>
+        }
       </li>
     } @empty {
       <li class="empty">Nothing planned yet. Add what you'll focus on, then press ▶ to brew it.</li>

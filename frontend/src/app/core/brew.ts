@@ -1,26 +1,37 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
-import { Api, errorMessage } from './api';
+import { Api, TaskPatch, errorMessage } from './api';
 import { audio, chime, tick } from './audio';
 import { Auth } from './auth';
 import { LiveEvents } from './live';
 import { BUILTIN_MODES, fromPreset } from './modes';
 import { Completed, FocusRequest, LiveEvent, Mode, Phase, Preset, Settings, Stats, Task, TimerAction } from './models';
 import { persistedSignal } from './persisted';
-import { formatClock, localDay } from './time';
+import { browserZone, formatClock, localDay } from './time';
 import { Timer } from './timer';
 import { Toasts } from './toast';
 
-const DEFAULT_SETTINGS: Settings = {
+export const DEFAULT_SETTINGS: Settings = {
   sound: true,
   notify: false,
   autoBreak: true,
   strict: false,
   breathe: true,
   tick: 'off',
+  timeZone: '',
+  workdayStart: '09:00',
+  workdayEnd: '17:00',
+  minGapMin: 0,
+  bufferMin: 10,
+  maxBlocksPerDay: 4,
+  maxFocusMinPerDay: 240,
+  protectLunch: true,
+  writeBack: false,
+  assistantEnabled: true,
+  shareEventTitles: false,
 };
 
 export type Dialog = 'intention' | 'breathe' | 'reflect' | 'settings' | null;
-type Resource = 'presets' | 'tasks' | 'sessions' | 'settings';
+type Resource = 'presets' | 'tasks' | 'sessions' | 'settings' | 'schedule';
 
 /**
  * The session flow and the user's productivity data. It turns live server events
@@ -89,6 +100,8 @@ export class Brew {
   /** After login: open the live stream and load everything. */
   async start(): Promise<void> {
     this.live.connect();
+    // Accounts made before planning existed have no time zone; the browser's is the best guess.
+    if (this.auth.user() && !this.auth.user()!.settings.timeZone) void this.updateSettings({ timeZone: browserZone() });
     await Promise.all((['presets', 'tasks', 'sessions'] as Resource[]).map((r) => this.refresh(r)));
     this.timer.apply(await this.api.timer());
   }
@@ -268,6 +281,14 @@ export class Brew {
     await this.attempt(() => this.api.updateTask(task.id, { done: !task.done }));
     if (task.id === this.taskId() && !task.done) this.taskId.set(null);
     void this.refresh('tasks');
+  }
+
+  /** Change a task's planning details (estimate, deadline, priority, energy). */
+  async editTask(task: Task, patch: TaskPatch): Promise<void> {
+    await this.attempt(async () => {
+      const saved = await this.api.updateTask(task.id, patch);
+      this.tasks.update((list) => list.map((t) => (t.id === saved.id ? { ...t, ...saved } : t)));
+    });
   }
 
   async removeTask(task: Task): Promise<void> {

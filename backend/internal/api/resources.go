@@ -1,9 +1,11 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -50,14 +52,33 @@ func (h *handler) deletePreset(c *gin.Context) {
 // ---- tasks --------------------------------------------------------------------------
 
 type taskInput struct {
-	Title    string `json:"title" binding:"required,max=120"`
-	Estimate int    `json:"estimate" binding:"min=1,max=20"`
+	Title    string  `json:"title" binding:"required,max=120"`
+	Estimate int     `json:"estimate" binding:"min=1,max=20"`
+	DueAt    *string `json:"due_at"` // RFC 3339; "" or absent for none
+	Priority int     `json:"priority" binding:"min=0,max=3"`
+	Energy   string  `json:"energy" binding:"omitempty,oneof=deep light"`
 }
 
 type taskPatch struct {
 	Title    *string `json:"title" binding:"omitempty,max=120"`
 	Estimate *int    `json:"estimate" binding:"omitempty,min=1,max=20"`
 	Done     *bool   `json:"done"`
+	DueAt    *string `json:"due_at"` // RFC 3339, or "" to clear
+	Priority *int    `json:"priority" binding:"omitempty,min=0,max=3"`
+	Energy   *string `json:"energy" binding:"omitempty,oneof=deep light ''"`
+}
+
+// parseDue reads an optional RFC 3339 deadline. "" clears it.
+func parseDue(raw *string) (*time.Time, error) {
+	if raw == nil || *raw == "" {
+		return nil, nil
+	}
+	t, err := time.Parse(time.RFC3339, *raw)
+	if err != nil {
+		return nil, errors.New("due_at must be an RFC 3339 time, e.g. 2026-10-30T17:00:00-05:00")
+	}
+	t = t.UTC()
+	return &t, nil
 }
 
 // taskView is a task plus the focus time logged against it.
@@ -102,7 +123,13 @@ func (h *handler) createTask(c *gin.Context) {
 		return
 	}
 	uid := auth.UserID(c)
-	task := store.Task{UserID: uid, Title: strings.TrimSpace(in.Title), Estimate: in.Estimate}
+	due, err := parseDue(in.DueAt)
+	if err != nil {
+		badRequest(c, err.Error())
+		return
+	}
+	task := store.Task{UserID: uid, Title: strings.TrimSpace(in.Title), Estimate: in.Estimate,
+		DueAt: due, Priority: in.Priority, Energy: in.Energy}
 	if task.Title == "" {
 		badRequest(c, "title is required")
 		return
@@ -135,6 +162,20 @@ func (h *handler) updateTask(c *gin.Context) {
 	}
 	if in.Done != nil {
 		task.Done = *in.Done
+	}
+	if in.DueAt != nil {
+		due, err := parseDue(in.DueAt)
+		if err != nil {
+			badRequest(c, err.Error())
+			return
+		}
+		task.DueAt = due
+	}
+	if in.Priority != nil {
+		task.Priority = *in.Priority
+	}
+	if in.Energy != nil {
+		task.Energy = *in.Energy
 	}
 	if ok(c, h.DB.Save(&task).Error) {
 		h.changed(uid, "tasks")

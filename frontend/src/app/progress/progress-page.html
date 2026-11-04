@@ -27,6 +27,13 @@
     <app-heatmap [minutesByDay]="s.heatmap" />
   </section>
 
+  @if (insights.value(); as i) {
+    <section class="panel px wide" aria-labelledby="planning-title">
+      <h2 class="panel-title" id="planning-title">Planning</h2>
+      <app-planning-insights [insights]="i" />
+    </section>
+  }
+
   <section class="panel px" aria-labelledby="cafe-title">
     <h2 class="panel-title" id="cafe-title">Your café</h2>
     <app-cafe-shelf [completed]="s.total.completed" />

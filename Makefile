@@ -1,8 +1,10 @@
-.PHONY: install api web build serve test docker
+.PHONY: install api web build serve test docker eval e2e demo
 
 # Secrets and local config (JWT_SECRET, ...) come from an untracked .env; see .env.example.
 -include .env
-export JWT_SECRET SECURE_COOKIES ADDR DB_PATH
+export JWT_SECRET SECURE_COOKIES ADDR DB_PATH GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_REDIRECT_URL \
+	CALENDAR_ENC_KEY PUBLIC_URL ANTHROPIC_API_KEY ASSISTANT_MODEL ASSISTANT_DAILY_TOKENS ASSISTANT_EFFORT DEMO \
+	CALENDAR_PROVIDER ASSISTANT_PROVIDER
 
 # Switch to the Node version in .nvmrc (Angular 22 needs 24.15+) when nvm is installed, so
 # frontend targets work even in a terminal still holding an older Node on its PATH.
@@ -30,6 +32,12 @@ serve: build ## one process: Go serves the API and the built app on :5001
 test: ## Go tests under the race detector, then Angular unit tests
 	cd backend && go vet ./... && go test -race ./...
 	$(NODE) cd frontend && npx ng test --watch=false
+
+eval: ## run the assistant's eval set against the real model (costs a few cents; needs ANTHROPIC_API_KEY)
+	cd backend && go test -tags evals -run TestEvals -count=1 -v ./internal/assistant
+
+demo: ## the app with a seeded demo account (demo@brewfocus.dev / brewfocus) and no keys needed
+	cd backend && DEMO=true go run ./cmd/server
 
 docker: ## build and run the production image (data persists in the brewfocus-data volume)
 	docker build -t brew-focus .

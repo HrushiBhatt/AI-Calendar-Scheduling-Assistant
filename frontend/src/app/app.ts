@@ -19,10 +19,11 @@ import { IntentionDialog } from './dialogs/intention-dialog';
 import { ReflectionDialog } from './dialogs/reflection-dialog';
 import { SettingsDialog } from './dialogs/settings-dialog';
 import { Sprite } from './shared/sprite';
+import { StartingBanner } from './shared/starting-banner';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Sprite, IntentionDialog, BreathingDialog, ReflectionDialog, SettingsDialog],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Sprite, StartingBanner, IntentionDialog, BreathingDialog, ReflectionDialog, SettingsDialog],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './app.html',
   styleUrl: './app.css',

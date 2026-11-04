@@ -1,0 +1,55 @@
+{
+  "blocks": [
+    {
+      "task_id": 1,
+      "task": "Compiler project",
+      "starts_at": "2026-10-26T09:00:00-04:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 1.8,
+      "explain": "the earliest open slot that fits"
+    },
+    {
+      "task_id": 1,
+      "task": "Compiler project",
+      "starts_at": "2026-10-26T09:30:00-04:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 2.8,
+      "explain": "right next to your other block for this task"
+    },
+    {
+      "task_id": 1,
+      "task": "Compiler project",
+      "starts_at": "2026-10-26T10:00:00-04:00",
+      "focus_min": 25,
+      "rest_min": 5,
+      "mode": "Pomodoro",
+      "score": 2.8,
+      "explain": "right next to your other block for this task"
+    }
+  ],
+  "unplaced": [
+    {
+      "task_id": 1,
+      "task": "Compiler project",
+      "wanted": 4,
+      "placed": 3,
+      "reason": "total_blocks_reached"
+    },
+    {
+      "task_id": 2,
+      "task": "Docs",
+      "wanted": 4,
+      "placed": 0,
+      "reason": "total_blocks_reached"
+    }
+  ],
+  "notes": [
+    "modes: Pomodoro 25/5",
+    "history: cold start (0 past sessions), so every hour is weighted the same",
+    "placed: 3 blocks, 75 focus minutes"
+  ]
+}

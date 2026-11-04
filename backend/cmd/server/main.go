@@ -4,7 +4,8 @@
 //	go run ./cmd/server -static ../frontend/dist/brew-focus/browser
 //
 // Environment: JWT_SECRET signs login cookies (required in production),
-// SECURE_COOKIES=true when served over HTTPS.
+// SECURE_COOKIES=true when served over HTTPS. Calendar, assistant and push settings are
+// read in config.go; each feature is optional and the app runs with none of them set.
 package main
 
 import (
@@ -16,15 +17,21 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
+	_ "time/tzdata" // every user's IANA zone resolves, whatever the container ships
 
 	"golang.org/x/sync/errgroup"
 
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/api"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/auth"
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/calendar"
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/demo"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/engine"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/events"
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/plans"
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/scheduler"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/store"
 )
 
@@ -47,8 +54,15 @@ func run(addr, dbPath, static string) error {
 		log.Print("JWT_SECRET not set: using a random key, so everyone is logged out when the server restarts")
 	}
 
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
 	db, err := store.Open(dbPath)
 	if err != nil {
+		return err
+	}
+	if err := cfg.checkSealedAccounts(db); err != nil {
 		return err
 	}
 
@@ -65,16 +79,45 @@ func run(addr, dbPath, static string) error {
 		return err
 	}
 
+	cal := calendar.NewService(db, hub, cfg.calendarOptions())
+	if os.Getenv("DEMO") == "true" {
+		if err := demo.Seed(ctx, db, cal, demoCalendar, time.Now()); err != nil {
+			return err
+		}
+		log.Printf("demo: sign in as %s / %s", demo.Email, demo.Password)
+	}
+	g.Go(func() error { return cal.Run(ctx) })        // debounced syncs, or polling without PUBLIC_URL
+	g.Go(func() error { return cal.RunRenewer(ctx) }) // push channels expire after about a week
+
+	planSvc := plans.New(db, hub)
+	// After a sync changes a calendar, check accepted blocks against it.
+	cal.AfterSync = func(ctx context.Context, userID uint) {
+		if err := planSvc.Reconcile(ctx, userID); err != nil {
+			log.Printf("plans: reconciling user %d: %v", userID, err)
+		}
+	}
+	writer := cal.NewWriter() // copies accepted blocks to a "Brew Focus" calendar when write-back is on
+	planSvc.Calendar = writer
+	g.Go(func() error { return writer.Run(ctx) })
+	dispatcher := scheduler.New(db, hub, timers)
+	planSvc.OnChange = dispatcher.Wake // a block accepted one minute out still gets its warning
+	g.Go(func() error { dispatcher.Run(ctx.Done()); return nil })
+
 	srv := &http.Server{
 		Addr: addr,
 		Handler: api.NewRouter(api.Deps{
-			DB: db, Hub: hub, Engine: timers,
-			Auth: auth.NewManager(secret, os.Getenv("SECURE_COOKIES") == "true"),
+			DB: db, Hub: hub, Engine: timers, Calendar: cal, Plans: planSvc, Dispatcher: dispatcher,
+			Assistant: cfg.newAssistant(db, planSvc),
+			Auth:      auth.NewManager(secret, os.Getenv("SECURE_COOKIES") == "true"),
 		}, static),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	g.Go(func() error {
-		log.Printf("Brew Focus listening on http://localhost%s", addr)
+		host := addr
+		if strings.HasPrefix(addr, ":") {
+			host = "localhost" + addr
+		}
+		log.Printf("Brew Focus listening on http://%s", host)
 		if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}

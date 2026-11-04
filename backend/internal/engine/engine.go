@@ -82,6 +82,9 @@ type FocusRequest struct {
 	Intention string
 	TaskID    *uint
 	Day       string // the user's local calendar day
+	// ScheduledID attributes the session to the planned block that started it (nil when
+	// the user started it by hand).
+	ScheduledID *uint
 }
 
 type command struct {
@@ -132,6 +135,7 @@ func (e *Engine) StartFocus(userID uint, req FocusRequest) (State, error) {
 	session := &store.Session{
 		UserID: userID, TaskID: req.TaskID, Mode: req.Mode, Planned: int(req.Planned.Seconds()),
 		Intention: req.Intention, Day: req.Day, State: store.StateRunning, EndsAt: &endsAt,
+		ScheduledID: req.ScheduledID,
 	}
 	if err := e.db.Create(session).Error; err != nil {
 		return State{}, err
