@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, output, signal } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { Assistant } from '../core/assistant';
 import { Brew } from '../core/brew';
 import { PlanArgs, PlanResponse, PlanWindow } from '../core/models';
@@ -53,7 +54,14 @@ const EXAMPLES = [
           @if (reply(); as r) {
             <p class="reply" role="status"><span class="label">Assistant</span> {{ r }}</p>
           }
-          <p class="hint">The assistant only reads your request. The scheduler picks every time, around your real meetings.</p>
+          <p class="hint">
+            @if (browserOnly) {
+              A simple phrase matcher reads your request in this demo, with no AI model. Try "three blocks tomorrow". The real
+              scheduler picks every time, around the sample meetings.
+            } @else {
+              The assistant only reads your request. The scheduler picks every time, around your real meetings.
+            }
+          </p>
           <button class="btn btn-primary px" [disabled]="assistant.pending() || !text().trim()">
             {{ assistant.pending() ? 'Planning…' : 'Plan it' }}
           </button>
@@ -174,6 +182,7 @@ const EXAMPLES = [
 })
 export class PlanComposer {
   protected readonly assistant = inject(Assistant);
+  protected readonly browserOnly = environment.browserBackend;
   protected readonly brew = inject(Brew);
   readonly planned = output<PlanResponse>();
 

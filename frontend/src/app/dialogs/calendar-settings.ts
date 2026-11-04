@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, resource, signal } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { Api, errorMessage } from '../core/api';
 import { Brew } from '../core/brew';
 import { LiveEvents } from '../core/live';
@@ -28,7 +29,9 @@ import { Toasts } from '../core/toast';
             }
             <div class="actions">
               <button class="btn btn-sm px" (click)="syncNow()" [disabled]="busy()">Sync now</button>
-              <button class="btn btn-sm btn-danger px" (click)="disconnect(a)" [disabled]="busy()">Disconnect</button>
+              @if (!browserOnly) {
+                <button class="btn btn-sm btn-danger px" (click)="disconnect(a)" [disabled]="busy()">Disconnect</button>
+              }
             </div>
           </div>
         } @empty {
@@ -47,6 +50,9 @@ import { Toasts } from '../core/toast';
       } @else if (state.error()) {
         <p class="err">Couldn't load your calendars.</p>
       }
+      @if (browserOnly) {
+        <p class="setting-hint">This demo plans around a sample calendar. Connecting Google Calendar needs the full app.</p>
+      } @else {
       <label class="setting">
         <span class="setting-label">Write blocks back</span>
         <span class="setting-hint">Copy accepted focus blocks to a "Brew Focus" calendar, so colleagues see you're busy.</span>
@@ -57,6 +63,7 @@ import { Toasts } from '../core/toast';
         <span class="setting-hint">Off, the assistant's model sees only "Busy". The planner works the same either way.</span>
         <input type="checkbox" class="switch" [checked]="brew.settings().shareEventTitles" (change)="flag('shareEventTitles', $event)" />
       </label>
+      }
     </section>
   `,
   styles: `
@@ -104,6 +111,7 @@ export class CalendarSettings {
   private readonly toasts = inject(Toasts);
   protected readonly brew = inject(Brew);
   protected readonly busy = signal(false);
+  protected readonly browserOnly = environment.browserBackend;
   protected readonly state = resource({ loader: () => this.api.calendarAccounts() });
 
   constructor() {

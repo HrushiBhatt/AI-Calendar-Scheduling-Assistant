@@ -1,4 +1,10 @@
 <div class="app">
+  @if (live.isLocal) {
+    <p class="demo-banner">
+      Live demo with sample data. It runs entirely in your browser, and nothing you type leaves this device.
+      <a href="https://github.com/HrushiBhatt/AI-Calendar-Scheduling-Assistant" rel="noopener">See the code</a>
+    </p>
+  }
   @if (auth.user(); as user) {
     <header class="header">
       <a class="logo" routerLink="/">
@@ -14,8 +20,14 @@
         <span
           class="live"
           [class.on]="live.connected()"
-          [title]="live.connected() ? 'Synced live with your other tabs and devices' : 'Reconnecting to the server…'"
-          >{{ live.connected() ? 'LIVE' : 'OFFLINE' }}</span
+          [title]="
+            live.isLocal
+              ? 'Demo: saved in this browser and synced across its tabs'
+              : live.connected()
+                ? 'Synced live with your other tabs and devices'
+                : 'Reconnecting to the server…'
+          "
+          >{{ live.isLocal ? 'DEMO' : live.connected() ? 'LIVE' : 'OFFLINE' }}</span
         >
         <span class="user" [title]="user.email">{{ user.name }}</span>
         <button class="icon-btn settings-btn px" (click)="brew.dialog.set('settings')" aria-label="Settings">

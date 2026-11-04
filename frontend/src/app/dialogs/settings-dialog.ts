@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { Auth } from '../core/auth';
 import { Brew } from '../core/brew';
 import { Settings } from '../core/models';
@@ -99,14 +100,23 @@ function zones(): string[] {
 
         <app-calendar-settings />
 
-        <app-account-security />
-
-        <p class="setting-hint">Settings are saved to your account, so they follow you to every device.</p>
+        @if (!browserOnly) {
+          <app-account-security />
+          <p class="setting-hint">Settings are saved to your account, so they follow you to every device.</p>
+        }
         <p class="shortcuts"><kbd>Space</kbd> start / pause · <kbd>R</kbd> reset · <kbd>S</kbd> finish or skip</p>
-        <div class="account">
-          <span>Signed in as <b>{{ auth.user()?.email }}</b></span>
-          <button class="btn btn-sm px" (click)="logout()">Log out</button>
-        </div>
+        @if (browserOnly) {
+          <p class="setting-hint">
+            This is a demo: everything is saved in this browser, with no account. The full app adds sign-in, Google
+            Calendar, the AI assistant and timers that keep running on a server.
+          </p>
+          <button class="btn btn-sm px" (click)="resetDemo()">Reset the demo</button>
+        } @else {
+          <div class="account">
+            <span>Signed in as <b>{{ auth.user()?.email }}</b></span>
+            <button class="btn btn-sm px" (click)="logout()">Log out</button>
+          </div>
+        }
         <button class="btn btn-danger px" (click)="brew.clearData()">Delete all sessions</button>
       </div>
     </app-modal>
@@ -178,6 +188,7 @@ export class SettingsDialog {
   protected readonly toggles = TOGGLES;
   protected readonly numbers = NUMBERS;
   protected readonly zoneList = zones();
+  protected readonly browserOnly = environment.browserBackend;
 
   protected toggle(key: Toggle, event: Event): void {
     void this.brew.updateSettings({ [key]: (event.target as HTMLInputElement).checked });
@@ -197,6 +208,10 @@ export class SettingsDialog {
     const value = input.valueAsNumber;
     if (Number.isFinite(value)) void this.brew.updateSettings({ [key]: Math.round(value) } as Partial<Settings>);
     else input.value = String(this.brew.settings()[key]);
+  }
+
+  protected resetDemo(): void {
+    environment.resetLocalData?.();
   }
 
   protected async logout(): Promise<void> {

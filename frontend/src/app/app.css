@@ -133,3 +133,17 @@
     text-align: center;
   }
 }
+
+.demo-banner {
+  margin: 0 0 14px;
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  text-align: center;
+  color: var(--gray-300);
+  background: var(--accent-soft);
+  border: 2px solid var(--gray-700);
+}
+
+.demo-banner a {
+  color: var(--accent-bright);
+}

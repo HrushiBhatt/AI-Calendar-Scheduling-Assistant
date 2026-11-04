@@ -2,9 +2,20 @@
 
 Every notable change to Brew Focus, and why it was made. Newest first. Dates are when the work landed; there are no version tags yet.
 
-## Unreleased: security hardening and documentation
+## 2026-11-04: a working public site
 
-Branch `feature/security-and-docs`.
+- **Fixed: the site at [hrushibhatt.github.io/AI-Calendar-Scheduling-Assistant/](https://hrushibhatt.github.io/AI-Calendar-Scheduling-Assistant/) was a blank page.** *Why:* it was still a September build with the repo's old name hardcoded, so renaming the repo made every file fail to load, and nothing ever deployed from `main` to replace it.
+- **Added: a live demo, deployed by GitHub Actions on every push to `main`.** *Why:* the project needs a link people can open. Pages only serves static files, so the demo answers API requests in the browser, with sample data and no account.
+- **Added: the real scheduler compiled to WebAssembly** (`backend/cmd/plannerwasm`). *Why:* a TypeScript copy could drift from the Go code. A test runs every golden fixture through this entry point, so the demo's plans match the full app's.
+- **Added: browser tests against the static build, served the way Pages serves it.** Publishing waits on them. *Why:* they caught a build that had no `index.html`, which would have broken the live site.
+- **Changed: the site's path now comes from the repo's name at build time.** *Why:* so renaming the repo can't blank the site again.
+- **Changed: work now happens directly on `main`.** *Why:* the owner is the only person on the repo.
+
+This reverses the earlier call against GitHub Pages, below. The full app is still the Go server, and it isn't hosted anywhere public yet.
+
+## 2026-11-03: security hardening and documentation
+
+Merged to `main` as pull request #2.
 
 ### Security: accounts and sessions
 
@@ -42,7 +53,7 @@ Branch `feature/security-and-docs`.
 
 ### CI
 
-- **Fixed: the image scan failed on every run.** *Why:* the official Trivy action's installer downloads from `get.trivy.dev`, which stopped resolving on 2026-11-03, so the scanner never ran. CI now downloads Trivy directly from its GitHub release and checks a pinned hash.
+- **Fixed: the image scan failed on every run.** *Why:* the official Trivy action's installer downloads from `get.trivy.dev`, which stopped resolving on 2026-11-03, so the scanner never ran. CI now downloads Trivy directly from its GitHub release and checks a pinned hash. The first real scan of the image then passed on `main`.
 
 ### Documentation
 

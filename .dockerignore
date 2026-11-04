@@ -30,3 +30,4 @@ backups/
 .github
 docs
 *.md
+frontend/.pages-assets

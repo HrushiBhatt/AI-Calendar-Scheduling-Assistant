@@ -4,7 +4,7 @@ Context for AI agents working in this repository. Read this before changing anyt
 
 ## Status report
 
-*Last updated: 2026-11-03. Update this section when the state changes.*
+*Last updated: 2026-11-04. Update this section when the state changes.*
 
 | Area | State |
 |---|---|
@@ -12,22 +12,25 @@ Context for AI agents working in this repository. Read this before changing anyt
 | Accounts, sessions, security hardening, supply-chain checks | Built and tested |
 | Google sign-in, Google Calendar | Built. Tested only against local stand-ins, never a real Google account |
 | AI assistant | Built. Tested with a scripted fake model. The eval has never run against the real model |
-| Hosting | **Not deployed.** The hosting choice belongs to the owner |
-| GitHub Pages | Still serves a stale September build, blank since the repo was renamed. It isn't the real app |
+| Live demo | https://hrushibhatt.github.io/AI-Calendar-Scheduling-Assistant/ is the browser-only demo, published to the `gh-pages` branch by the `pages` job in CI on every push to `main` |
+| Hosting the full app | **Not deployed.** The Go server runs nowhere public, and the hosting choice belongs to the owner |
 
-**Open decisions for the owner. Don't make these yourself:** where to host, and whether to retire the Pages site.
+**Open decision for the owner. Don't make it yourself:** where to host the full app.
 
 ## Scope
 
 **In scope:** a single-user-at-a-time web app for focus sessions and calendar-aware planning, run as one Go process with SQLite.
 
-**Out of scope unless the owner asks:** other languages or a backend rewrite, multiple server instances, a static or in-browser version of the backend, a mobile app, team or shared features. A Python port was started and abandoned, and a GitHub Pages build was built and reverted.
+**Out of scope unless the owner asks:** other languages or a backend rewrite, multiple server instances, a mobile app, team or shared features. A Python port was started and abandoned.
+
+The live demo is in scope, but it's a demo. It must never collect passwords or send anything off the device.
 
 ## Repository map
 
 | Path | What's there |
 |---|---|
 | `backend/cmd/server` | Startup, configuration checks, background-task wiring |
+| `backend/cmd/plannerwasm` | The planner compiled to WebAssembly, for the live demo |
 | `backend/internal/planner` | The pure scheduler and its golden fixtures |
 | `backend/internal/plans` | Plan lifecycle: input building, proposals, accept, move, reconcile |
 | `backend/internal/scheduler` | Dispatcher: due blocks become running timers |
@@ -39,7 +42,9 @@ Context for AI agents working in this repository. Read this before changing anyt
 | `backend/internal/store` | GORM models, sealed tokens, SQLite setup |
 | `backend/internal/api` | Gin handlers, `hardening.go` middleware |
 | `frontend/src/app` | Angular: `core` services, `brew`, `plan`, `progress`, `dialogs`, `login` |
-| `frontend/e2e` | Playwright browser tests |
+| `frontend/src/app/core/local` | The live demo's in-browser backend and sample data. Only the `pages` build bundles it |
+| `frontend/e2e` | Playwright browser tests against the Go server |
+| `frontend/e2e-pages` | Playwright browser tests against the static demo, served as Pages serves it |
 | `docs/assets` | README images, and `generate.py`, which draws the SVGs |
 
 The Go module path still says `Productivity-Manager`, the repo's old name. That's harmless, so leave it unless asked. The repo is now `AI-Calendar-Scheduling-Assistant`.
@@ -53,9 +58,11 @@ make web                   # Angular on :4200
 make test                  # Go tests under -race, then Angular unit tests
 make audit                 # govulncheck, gosec, gitleaks, npm audit
 cd frontend && npm run e2e # browser tests; locally they drive the installed Chrome
+make pages                 # the live demo on :4200, with no Go server
+make pages-build           # the site CI publishes; then: cd frontend && npm run e2e:pages
 ```
 
-Before calling work done, run `make test` and `make audit`. Also run `npm run e2e` if you touched the frontend, security headers, or a build setting. A new script source, font or image host must be allowed by the Content-Security-Policy, and only the browser test will catch a mistake there.
+Before calling work done, run `make test` and `make audit`. Also run `npm run e2e` and `npm run e2e:pages` if you touched the frontend, security headers, or a build setting. A new script source, font or image host must be allowed by the Content-Security-Policy, and only the browser test will catch a mistake there.
 
 ## Rules that must not break
 
@@ -67,6 +74,7 @@ A change that breaks one of these is wrong even if everything else works.
 4. **Nothing moves by itself.** Automation proposes and the user decides.
 5. **The app works with no keys.** Every external integration is optional and degrades on its own.
 6. **All arithmetic on local days happens in the user's IANA zone,** and database times are UTC.
+7. **The live demo uses the real scheduler.** Don't reimplement the planner in TypeScript: it runs as WebAssembly through `cmd/plannerwasm`. If an API route changes, update `core/local/local-backend.ts` to match, or the live site breaks where the server doesn't.
 
 ## Security rules
 
@@ -87,6 +95,8 @@ A change that breaks one of these is wrong even if everything else works.
 | A matching email is refused at Google sign-in instead of joining the account | It prevents pre-registration account takeover |
 | `style-src 'unsafe-inline'` in the policy | Angular writes component styles inline. Scripts have no such exception |
 | No server-wide `ReadTimeout` or `WriteTimeout` | Event streams stay open for hours, and a server-wide deadline would cut them off. `readBody` bounds bodies instead |
+| The app answers `/api` with no server in the Pages build | That's the live demo: `environment.pages.ts` adds an interceptor that handles those requests in the browser. Pages can't run the Go server |
+| `style-src 'unsafe-inline'`, and a `wasm-unsafe-eval` in `index.pages.html` | Angular writes styles inline, and that one keyword lets the demo run the WebAssembly scheduler. Neither allows injected scripts |
 | The Trivy action isn't used | Its installer depends on `get.trivy.dev`, which stopped resolving |
 | `dummyHash` work on failed logins | Equal timing hides which emails exist |
 | Sessions are a JWT *and* a database row | The signature rejects forgeries cheaply, and the row makes them revocable |
@@ -94,7 +104,7 @@ A change that breaks one of these is wrong even if everything else works.
 
 ## Working agreement
 
-- **Work on a branch and leave merging to the owner.** The owner reviews and merges through pull requests. Don't push to `main`.
+- **Work directly on `main`.** The owner is the only person on this repo and asked for no new branches. Check out `main`, pull, commit there and push once it's verified. A push to `main` deploys the live site, so run the checks first.
 - **Update `CHANGELOG.md` with every change,** and say why, not only what.
 - **Keep this file's status report current,** and ARCHITECTURE.md if a decision changes.
 - **Report only measured numbers.** Benchmarks, coverage, test counts and eval results must come from a real run, with the hardware named where it matters. If something wasn't run, say so. "Not measured yet" is an acceptable entry, and an invented number isn't.

@@ -99,10 +99,13 @@ A new user has no history, so each hour starts at a flat prior that blends towar
 **Decision.** A single goroutine wakes at each block's warning and start, and at least every 30 seconds.
 **Why.** A plan can hold blocks days away. That state belongs in the database, not in thousands of sleeping goroutines.
 
-### No GitHub Pages
+### The public site is a browser-only demo
 
-**Decision.** A Pages build with an in-browser copy of the API was built and then reverted (commits `606a645`, `13b0c26`).
-**Why.** Pages only serves static files, so that build had to reimplement the backend in TypeScript and give up the server-run design that defines the app.
+**Decision.** GitHub Pages serves a demo of the app with an in-browser backend (`frontend/src/app/core/local`) and sample data. GitHub Actions rebuilds and publishes it on every push to `main`, after its browser tests pass. The full app stays the Go server.
+**Why.** The project needs a link people can open, and a free static host can give it one today, with no account or running costs. Pages can't run a server, so the demo answers `/api` in the browser.
+**Keeping it honest.** The scheduler isn't rewritten: `backend/cmd/plannerwasm` compiles the real Go planner to WebAssembly, and a test runs every golden fixture through that entry point. It costs about 1.5 MB gzipped, so it loads only on the first planning request. Timers, plans and stats are a TypeScript copy of the server's rules, so those can drift, and the demo says plainly what it stands in for.
+**Safety.** There are no accounts, so the demo never asks for a password. It sends nothing anywhere, and it carries the same Content-Security-Policy as a meta tag, because Pages can't send response headers. The in-browser backend is only bundled in this build: the normal build doesn't contain it.
+**History.** An earlier Pages build was reverted (commits `606a645`, `13b0c26`), because it replaced the scheduler with TypeScript and predated the planner. Renaming the repo later left that stale build blank, since it had the old repo path hardcoded. The path now comes from the repo's name at build time.
 
 ## Security architecture
 
@@ -161,6 +164,7 @@ The design assumes any single layer can fail, so requests pass through independe
 | `style-src 'unsafe-inline'` | Angular needs it, and scripts have no such exception. A nonce-based policy would break static style attributes in templates |
 | `zxcvbn` port last released in 2019 | It's a pure algorithm with no network access, input is capped at 72 bytes, and it's the best-known strength estimator with a Go port |
 | Rate limits are in memory | Right for one process, and they reset on restart |
+| The live demo's policy is a meta tag | Pages can't send response headers, and a meta tag can't set `frame-ancestors`. The demo holds only sample data and whatever a visitor types into their own browser |
 
 ## Calendar integration
 
@@ -204,7 +208,8 @@ Everything except `/api/health`, the sign-in routes and the Google webhook requi
 - **Calendar.** A fake provider covers sync, push, renewal and write-back. The Google provider runs against a local stand-in for the Calendar API.
 - **Assistant.** A scripted fake model covers the tool loop, retries, the round cap, the budget, dropped narration and degradation.
 - **Security.** Tests attack the app: replaying a stolen cookie after sign-out, forged ID tokens signed with the wrong key, wrong audience and issuer, login CSRF, email-collision account takeover, and cross-site requests. Google sign-in runs against a local OpenID provider using real RSA signatures, so the actual verification code runs. Each of these protections was also removed on purpose to confirm its test fails. Run the same exercise on any new protection.
-- **Browser.** Playwright drives real Chrome through the planning loop, and checks that the policy blocks an injected script, the page loads nothing from a third party, and a copied cookie stops working after sign-out.
+- **Browser.** Playwright drives a real browser through the planning loop, and checks that the policy blocks an injected script, the page loads nothing from a third party, and a copied cookie stops working after sign-out.
+- **Live demo.** A second Playwright suite serves the static build the way Pages does, under the repo's path with `404.html` as the fallback. It checks that the page loads, deep links work, the WebAssembly scheduler plans around the sample meetings, and nothing calls a server. Publishing waits on it, so a broken build can't replace the live site.
 
 ## Known gaps and roadmap
 
@@ -215,7 +220,7 @@ Everything except `/api/health`, the sign-in routes and the Google webhook requi
 
 **Next, in order**
 
-1. **Host it.** It needs a container host with a persistent disk. Set `JWT_SECRET`, `SECURE_COOKIES` and `TRUSTED_PROXIES`, and retire the old Pages site.
+1. **Host the full app.** The live demo is on GitHub Pages, but sign-in, Google Calendar, the assistant and server-run timers need a container host with a persistent disk. Set `JWT_SECRET`, `SECURE_COOKIES` and `TRUSTED_PROXIES`.
 2. **Verify Google and the eval** against the real services, above.
 3. **Send email.** Email unlocks address verification and password reset. Today a forgotten password can't be recovered unless Google is linked.
 4. **Two-factor authentication** with TOTP, for password accounts.

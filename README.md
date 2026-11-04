@@ -19,7 +19,7 @@
 Ask for *"three blocks on the compiler project tomorrow"*. A deterministic scheduler finds the real gaps between your meetings,<br/>
 tells you why it chose each one, and starts each block by itself. The timers run on the server, so they survive a closed tab.
 
-[**▶ See it run**](#see-it-run) · [How it works](#how-it-works) · [Security](#security) · [Run it](#run-it) · [Architecture](ARCHITECTURE.md) · [Changelog](CHANGELOG.md) · [For AI agents](AGENTS.md)
+[**▶ Try the live demo**](https://hrushibhatt.github.io/AI-Calendar-Scheduling-Assistant/) · [See it run](#see-it-run) · [How it works](#how-it-works) · [Security](#security) · [Run it](#run-it) · [Architecture](ARCHITECTURE.md) · [Changelog](CHANGELOG.md) · [For AI agents](AGENTS.md)
 
 </div>
 
@@ -32,6 +32,24 @@ tells you why it chose each one, and starts each block by itself. The timers run
   <br/>
   <sub>Recorded from the running app with the demo account. The calendar is the demo's in-memory one and the assistant is the test stand-in for the model; the scheduler, timer and interface are the real code.</sub>
 </div>
+
+<div align="center">
+
+### [▶ Try the live demo](https://hrushibhatt.github.io/AI-Calendar-Scheduling-Assistant/)
+
+No sign-up. It opens with sample tasks, meetings and a month of history.
+
+</div>
+
+The demo runs entirely in your browser, and **its scheduler is the same Go code as the full app**, compiled to WebAssembly. GitHub Pages only serves static files, so the parts that need a server are stood in for, and the page says so:
+
+| | Live demo (GitHub Pages) | Full app (Go server) |
+|---|---|---|
+| **Scheduler** | The real one, as WebAssembly | The real one |
+| **Timer** | In your browser. It survives a reload and syncs across tabs | On the server. It survives a closed tab and syncs across devices |
+| **Calendar** | A sample calendar | Your Google Calendar |
+| **Plain-language requests** | A simple phrase matcher | The Claude API |
+| **Accounts** | None: nothing you type leaves your device | Google sign-in or a password |
 
 ## What it does
 
@@ -203,13 +221,13 @@ sequenceDiagram
 
 | Measure | Result |
 |---|---|
-| Backend tests | **134 tests and 424 subtests**, always under the race detector in CI |
-| Frontend tests | **40 unit tests**, plus **2 full browser tests**, one of which checks the live security policy in the browser itself |
+| Backend tests | **137 tests and 441 subtests**, always under the race detector in CI |
+| Frontend tests | **51 unit tests** and **9 full browser tests**: 2 against the Go server and 7 against the static demo, served the way GitHub Pages serves it |
 | Scheduler | **17 golden fixtures**, including a daylight-saving day and a red-eye across midnight, plus a property test over **400 random calendars** in five time zones |
 | Scheduler speed | **About 82 µs** to plan a busy week (5 runs: 79 to 86 µs, Apple M2) |
 | Password hashing | **281 ms** per bcrypt hash at cost 12 (Apple M2) |
 
-<img src="docs/assets/chart-coverage.svg" alt="Backend test coverage by package: events 100%, planner 97.3%, engine 92.9%, auth 88.6%, api 85.4%, assistant 81.9%, scheduler 81.6%, store 78.4%, plans 76.4%, calendar 70.9%, cmd/server 14.9%, demo 0%. Overall 78.2%." width="100%"/>
+<img src="docs/assets/chart-coverage.svg" alt="Backend test coverage by package: events 100%, planner 97.3%, engine 92.9%, auth 88.6%, api 85.4%, assistant 81.9%, scheduler 81.6%, store 78.4%, plannerwasm 78.3%, plans 76.4%, calendar 70.9%, cmd/server 14.9%, demo 0%. Overall 78.2%." width="100%"/>
 
 <sub>The two low bars are startup wiring and demo seed data. The planner, engine and security code are what the suite is built around.</sub>
 
@@ -253,7 +271,7 @@ Why it's built this way, including what was tried and rejected, is in **[ARCHITE
 | Integrations | Google Calendar API, Claude API (tool use), both optional |
 | Authentication | OAuth 2.0 with PKCE and OpenID Connect ([go-oidc](https://github.com/coreos/go-oidc)), bcrypt, signed cookies with server-side sessions |
 | Testing | Go race detector, golden files, property tests, Vitest, Playwright |
-| Delivery | Docker on a distroless, non-root base, GitHub Actions |
+| Delivery | Docker on a distroless, non-root base, GitHub Actions, GitHub Pages for the live demo |
 
 ## Run it
 
@@ -272,6 +290,7 @@ Sign in as **demo@brewfocus.dev** with password **brewfocus**. The demo has two 
 | `make test` | Go tests under the race detector, then the Angular unit tests |
 | `make audit` | The security scans CI runs: vulnerable dependencies, risky code, leaked secrets |
 | `make serve` | Everything in one process on :5001. Needs `JWT_SECRET`, because it runs in release mode |
+| `make pages` | The browser-only demo on :4200, with no Go server running |
 | `cd frontend && npm run e2e` | The browser tests |
 
 <details>
@@ -315,7 +334,9 @@ The image holds the Angular build and a static Go binary on a distroless, non-ro
 docker run -p 5001:5001 -v brewfocus-data:/data -e JWT_SECRET=… -e CALENDAR_ENC_KEY=… brew-focus
 ```
 
-Timers and the event hub live in one process's memory, so run one instance. Scaling out would mean Postgres and a lease-based dispatcher. GitHub Pages only hosts static files, so it can't run this backend.
+Timers and the event hub live in one process's memory, so run one instance. Scaling out would mean Postgres and a lease-based dispatcher.
+
+The live demo is separate: every push to `main` rebuilds it and publishes it to GitHub Pages, once its browser tests pass. Pages only hosts static files, so it can't run this backend.
 
 </details>
 
@@ -327,7 +348,8 @@ Timers and the event hub live in one process's memory, so run one instance. Scal
 | Accounts, sessions, security hardening | ✅ Built and tested |
 | Google sign-in and Google Calendar | 🟡 Built and tested against a local stand-in for Google's servers, not yet with a real Google account |
 | AI assistant | 🟡 Built and tested with a scripted fake model. The [30-request eval set](backend/internal/assistant/testdata/evals.jsonl) hasn't been run against the real model, so there are no accuracy numbers yet |
-| Public hosting | ⬜ Not deployed yet |
+| Public site | ✅ [Live demo](https://hrushibhatt.github.io/AI-Calendar-Scheduling-Assistant/) on GitHub Pages, deployed from `main` by GitHub Actions |
+| Hosting the full app | ⬜ Not deployed yet. It needs a server that runs a container and keeps a disk |
 
 See the [roadmap](ARCHITECTURE.md#known-gaps-and-roadmap) and [changelog](CHANGELOG.md).
 
@@ -347,8 +369,11 @@ backend/
     auth/              bcrypt, sessions, OAuth sign-in, CSRF
     store/             GORM models, sealed tokens, SQLite
     api/               Gin handlers and security middleware
+  cmd/plannerwasm/     the scheduler compiled to WebAssembly, for the live demo
 frontend/src/app/      login, brew, plan, progress, dialogs, core services
-frontend/e2e/          the browser tests
+  core/local/          the live demo's in-browser backend and sample data
+frontend/e2e/          browser tests against the Go server
+frontend/e2e-pages/    browser tests against the static demo
 docs/assets/           the images in this README
 ```
 
