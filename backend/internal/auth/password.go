@@ -16,8 +16,9 @@ const (
 	// MaxPasswordBytes is bcrypt's limit. It counts bytes, so an accented or emoji
 	// password reaches it in fewer characters.
 	MaxPasswordBytes = 72
-	// minPasswordScore is zxcvbn's "safely unguessable" band: roughly 10^8 guesses or more,
-	// which at bcrypt's speed outlasts an online attack and slows an offline one to years.
+	// minPasswordScore is zxcvbn's "safely unguessable" band: roughly 10^8 guesses or more.
+	// Rate limits make that hopeless online, and at bcrypt cost 12 it is about a year of
+	// one CPU core per password offline.
 	minPasswordScore = 3
 )
 

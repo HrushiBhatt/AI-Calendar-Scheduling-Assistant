@@ -300,6 +300,14 @@ func TestGoogleCallbackRefusesLoginCSRF(t *testing.T) {
 	if code := victim.call("GET", "/api/me", nil, nil); code != 401 {
 		t.Errorf("the victim was signed in: %d", code)
 	}
+	// Having a sign-in of their own under way doesn't help: the state must match it.
+	g.startFlow(t, victim, "/api/auth/google/start")
+	if _, to := visit(t, victim, "/api/auth/google/callback?code=attackers&state="+url.QueryEscape(state)); to != "/login?error=expired" {
+		t.Errorf("with a different flow in progress, redirected to %q", to)
+	}
+	if code := victim.call("GET", "/api/me", nil, nil); code != 401 {
+		t.Errorf("the victim was signed in with the attacker's code: %d", code)
+	}
 	// A state can be used once.
 	c := g.browser(t)
 	state = g.startFlow(t, c, "/api/auth/google/start")
