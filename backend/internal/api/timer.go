@@ -86,7 +86,7 @@ func (h *handler) controlTimer(c *gin.Context) {
 // events streams the user's live updates as Server-Sent Events. It opens with a
 // snapshot of the timer, so a (re)connecting client is immediately in sync.
 func (h *handler) events(c *gin.Context) {
-	uid := auth.UserID(c)
+	uid, session := auth.UserID(c), auth.SessionID(c)
 	stream, unsubscribe := h.Hub.Subscribe(uid) // subscribe before the snapshot so nothing is missed
 	defer unsubscribe()
 
@@ -95,7 +95,7 @@ func (h *handler) events(c *gin.Context) {
 	c.SSEvent("timer", h.Engine.Current(c.Request.Context(), uid))
 	c.Writer.Flush()
 
-	ping := time.NewTicker(keepalive)
+	ping := time.NewTicker(h.Keepalive)
 	defer ping.Stop()
 	c.Stream(func(w io.Writer) bool {
 		select {
@@ -108,6 +108,9 @@ func (h *handler) events(c *gin.Context) {
 			c.SSEvent(e.Type, e.Data)
 			return true
 		case <-ping.C:
+			if !h.Auth.SessionActive(session) {
+				return false // signed out since this stream opened
+			}
 			_, err := io.WriteString(w, ": keepalive\n\n")
 			return err == nil
 		}

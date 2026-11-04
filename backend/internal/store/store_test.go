@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 const testKey = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
@@ -154,5 +157,46 @@ func TestTimeArgumentsCompareAsInstantsWhateverTheirZone(t *testing.T) {
 	db.First(&back)
 	if !back.StartsAt.Equal(at) {
 		t.Errorf("read back %v, want %v", back.StartsAt, at)
+	}
+}
+
+func TestDatabaseFileIsPrivate(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "brew.db")
+	// An existing, world-readable database gets tightened too.
+	if err := os.WriteFile(path, nil, 0o644); err != nil { //nolint:gosec // the point of the test
+		t.Fatal(err)
+	}
+	db, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sql, err := db.DB(); err == nil {
+		t.Cleanup(func() { _ = sql.Close() })
+	}
+	if err := db.Create(&User{Email: "a@b.co", PasswordHash: []byte{}, Settings: DefaultSettings}).Error; err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{path, path + "-wal"} {
+		info, err := os.Stat(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if mode := info.Mode().Perm(); mode != 0o600 {
+			t.Errorf("%s: mode %o, want 600", filepath.Base(name), mode)
+		}
+	}
+}
+
+func TestDatabaseLogsCarryNoValues(t *testing.T) {
+	db, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	filter, ok := db.Logger.(gorm.ParamsFilter)
+	if !ok {
+		t.Fatal("the logger can't filter parameters")
+	}
+	if _, params := filter.ParamsFilter(t.Context(), "SELECT ?", "a-secret"); params != nil {
+		t.Errorf("query values would be logged: %v", params)
 	}
 }

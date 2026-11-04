@@ -31,7 +31,7 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 export type Dialog = 'intention' | 'breathe' | 'reflect' | 'settings' | null;
-type Resource = 'presets' | 'tasks' | 'sessions' | 'settings' | 'schedule';
+type Resource = 'presets' | 'tasks' | 'sessions' | 'settings' | 'schedule' | 'account';
 
 /**
  * The session flow and the user's productivity data. It turns live server events
@@ -123,7 +123,7 @@ export class Brew {
       if (kind === 'presets') this.presets.set(await this.api.presets());
       if (kind === 'tasks') this.tasks.set(await this.api.tasks());
       if (kind === 'sessions') this.stats.set(await this.api.stats());
-      if (kind === 'settings') await this.auth.restore();
+      if (kind === 'settings' || kind === 'account') await this.auth.restore();
     } catch {
       // A 401 is handled by the interceptor; anything else is retried on the next event.
     }

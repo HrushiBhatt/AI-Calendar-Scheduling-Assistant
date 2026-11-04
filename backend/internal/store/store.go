@@ -91,6 +91,28 @@ type User struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+// LoginSession is one signed-in browser. The session cookie names a row here, so ending a
+// session is a delete: signing out, changing a password or "sign out everywhere" stops a
+// stolen cookie at once rather than when it expires. The ID alone is useless to anyone who
+// reads the database, because the cookie must also be signed with the server's key.
+type LoginSession struct {
+	ID        string    `gorm:"primaryKey;size:32"`
+	UserID    uint      `gorm:"index;not null"`
+	ExpiresAt time.Time `gorm:"index;not null"`
+	CreatedAt time.Time
+}
+
+// Identity links an account to an external sign-in. Subject is the provider's permanent ID
+// for the person; an email address can change hands, so it is never what links an account.
+type Identity struct {
+	ID        uint   `gorm:"primaryKey"`
+	UserID    uint   `gorm:"index;not null"`
+	Provider  string `gorm:"size:16;not null;uniqueIndex:idx_identity_subject,priority:1"`
+	Subject   string `gorm:"size:255;not null;uniqueIndex:idx_identity_subject,priority:2"`
+	Email     string `gorm:"size:254"`
+	CreatedAt time.Time
+}
+
 // Preset is a saved custom timing mode, e.g. "Thesis 75/15".
 type Preset struct {
 	ID        uint      `json:"id" gorm:"primaryKey"`
@@ -345,6 +367,9 @@ func CafeUnlock(n int) string {
 func Open(path string) (*gorm.DB, error) {
 	dsn := path
 	if path != ":memory:" {
+		if err := restrictFile(path); err != nil {
+			return nil, err
+		}
 		// WAL lets readers proceed while a write is in flight, and the busy timeout makes a
 		// writer wait for the lock instead of failing: HTTP handlers, the timer engine, the
 		// dispatcher and the calendar syncer now share this database.
@@ -360,6 +385,8 @@ func Open(path string) (*gorm.DB, error) {
 			SlowThreshold:             200 * time.Millisecond,
 			LogLevel:                  logger.Warn,
 			IgnoreRecordNotFoundError: true, // a 404, not a problem worth logging
+			// Log the SQL, never its values: they can be emails, hashes or sealed tokens.
+			ParameterizedQueries: true,
 		}),
 	})
 	if err != nil {
@@ -372,7 +399,24 @@ func Open(path string) (*gorm.DB, error) {
 	// One connection: SQLite serializes writes anyway, and ":memory:" gives each connection its own database.
 	sqlDB.SetMaxOpenConns(1)
 	return db, db.AutoMigrate(
-		&User{}, &Preset{}, &Task{}, &Session{},
+		&User{}, &LoginSession{}, &Identity{}, &Preset{}, &Task{}, &Session{},
 		&CalendarAccount{}, &CalendarEvent{}, &Plan{}, &ScheduledSession{}, &AssistantTurn{},
 	)
+}
+
+// restrictFile makes the database readable by this user alone: it holds password hashes
+// and sealed tokens. SQLite gives its -wal and -shm files the same permissions.
+func restrictFile(path string) error {
+	name, _, _ := strings.Cut(path, "?")
+	if name == "" || strings.HasPrefix(name, "file:") {
+		return nil // a URI's options are the caller's business
+	}
+	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR, 0o600) // #nosec G304 -- the operator's DB_PATH
+	if err != nil {
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return os.Chmod(name, 0o600)
 }

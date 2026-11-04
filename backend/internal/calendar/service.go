@@ -76,23 +76,23 @@ func (s *Service) CanConnect() (string, bool) {
 }
 
 // AuthURL is where the browser goes to grant access.
-func (s *Service) AuthURL(state string) (string, error) {
+func (s *Service) AuthURL(state, verifier string) (string, error) {
 	p, ok := s.providers[s.connectVia]
 	if !ok {
 		return "", ErrNotConfigured
 	}
-	return p.AuthURL(state), nil
+	return p.AuthURL(state, verifier), nil
 }
 
 // Connect finishes the OAuth flow: it stores the account's sealed tokens, runs a first
 // full sync and registers a push channel. A sync failure leaves the account connected
 // with SyncError set, so the user can see what happened and retry.
-func (s *Service) Connect(ctx context.Context, userID uint, code string) (*store.CalendarAccount, error) {
+func (s *Service) Connect(ctx context.Context, userID uint, code, verifier string) (*store.CalendarAccount, error) {
 	p, ok := s.providers[s.connectVia]
 	if !ok {
 		return nil, ErrNotConfigured
 	}
-	cred, err := p.Exchange(ctx, code)
+	cred, err := p.Exchange(ctx, code, verifier)
 	if err != nil {
 		return nil, err
 	}

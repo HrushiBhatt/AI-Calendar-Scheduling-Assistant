@@ -29,7 +29,7 @@ func (h *handler) calendarConnect(c *gin.Context) {
 	if !ok(c, err) {
 		return
 	}
-	authURL, err := h.Calendar.AuthURL(state)
+	authURL, err := h.Calendar.AuthURL(state, h.Auth.Derive("pkce", state))
 	if ok(c, err) {
 		c.JSON(http.StatusOK, gin.H{"auth_url": authURL})
 	}
@@ -46,13 +46,14 @@ func (h *handler) calendarCallback(c *gin.Context) {
 		back("denied") // the user said no on the consent screen
 		return
 	}
-	if !h.Auth.CheckState(c, uid, c.Query("state")) {
+	state := c.Query("state")
+	if !h.Auth.CheckState(c, uid, state) {
 		back("expired")
 		return
 	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), providerTimeout)
 	defer cancel()
-	if _, err := h.Calendar.Connect(ctx, uid, c.Query("code")); err != nil {
+	if _, err := h.Calendar.Connect(ctx, uid, c.Query("code"), h.Auth.Derive("pkce", state)); err != nil {
 		log.Printf("calendar: connecting user %d: %v", uid, err) // provider errors are scrubbed of tokens
 		back("error")
 		return

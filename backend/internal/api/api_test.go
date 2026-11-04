@@ -42,7 +42,10 @@ type env struct {
 	engine *engine.Engine
 }
 
-const sealKey = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+const (
+	sealKey      = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+	testPassword = "correct horse battery"
+)
 
 func setup(t *testing.T, staticDir string) *env {
 	t.Helper()
@@ -74,7 +77,7 @@ func setup(t *testing.T, staticDir string) *env {
 	planSvc.OnChange = disp.Wake
 	router := NewRouter(Deps{
 		DB: db, Hub: hub, Engine: timers, Calendar: cal, Plans: planSvc, Dispatcher: disp,
-		Auth: auth.NewManager([]byte("test-secret"), false),
+		Auth: auth.NewManager([]byte("test-secret"), false, db),
 	}, staticDir)
 	server := httptest.NewServer(router)
 	t.Cleanup(server.Close)
@@ -99,7 +102,7 @@ func (e *env) signup(t *testing.T, email string) *client {
 	t.Helper()
 	c := e.anonymous(t)
 	var user store.User
-	if code := c.call("POST", "/api/auth/register", obj{"email": email, "password": "correct horse"}, &user); code != 201 {
+	if code := c.call("POST", "/api/auth/register", obj{"email": email, "password": testPassword}, &user); code != 201 {
 		t.Fatalf("register %s: %d", email, code)
 	}
 	c.id = user.ID
@@ -178,10 +181,10 @@ func TestAccounts(t *testing.T) {
 	if code := c.call("POST", "/api/auth/login", obj{"email": "ada@example.com", "password": "wrong password"}, nil); code != 401 {
 		t.Fatalf("wrong password: %d, want 401", code)
 	}
-	if code := c.call("POST", "/api/auth/login", obj{"email": "nobody@example.com", "password": "correct horse"}, nil); code != 401 {
+	if code := c.call("POST", "/api/auth/login", obj{"email": "nobody@example.com", "password": testPassword}, nil); code != 401 {
 		t.Fatalf("unknown email: %d, want 401", code)
 	}
-	if code := c.call("POST", "/api/auth/login", obj{"email": " ADA@example.com", "password": "correct horse"}, nil); code != 200 {
+	if code := c.call("POST", "/api/auth/login", obj{"email": " ADA@example.com", "password": testPassword}, nil); code != 200 {
 		t.Fatalf("login: %d", code)
 	}
 	if code := c.call("GET", "/api/me", nil, nil); code != 200 {
@@ -500,13 +503,13 @@ func TestRegistrationStoresTheBrowserTimeZone(t *testing.T) {
 	e := setup(t, "")
 	var user store.User
 	c := e.anonymous(t)
-	if code := c.call("POST", "/api/auth/register", obj{"email": "ada@example.com", "password": "correct horse", "time_zone": "Europe/Berlin"}, &user); code != 201 {
+	if code := c.call("POST", "/api/auth/register", obj{"email": "ada@example.com", "password": testPassword, "time_zone": "Europe/Berlin"}, &user); code != 201 {
 		t.Fatalf("register: %d", code)
 	}
 	if user.Settings.TimeZone != "Europe/Berlin" || user.Settings.WorkdayStart != "09:00" {
 		t.Fatalf("settings = %+v", user.Settings)
 	}
-	if code := e.anonymous(t).call("POST", "/api/auth/register", obj{"email": "bob@example.com", "password": "correct horse", "time_zone": "Nowhere/Land"}, nil); code != 400 {
+	if code := e.anonymous(t).call("POST", "/api/auth/register", obj{"email": "bob@example.com", "password": testPassword, "time_zone": "Nowhere/Land"}, nil); code != 400 {
 		t.Fatalf("bad zone: %d, want 400", code)
 	}
 }

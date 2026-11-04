@@ -3,14 +3,13 @@
 //	go run ./cmd/server                                        # API only, for `ng serve`
 //	go run ./cmd/server -static ../frontend/dist/brew-focus/browser
 //
-// Environment: JWT_SECRET signs login cookies (required in production),
-// SECURE_COOKIES=true when served over HTTPS. Calendar, assistant and push settings are
-// read in config.go; each feature is optional and the app runs with none of them set.
+// Environment: JWT_SECRET signs login cookies (required in release mode),
+// SECURE_COOKIES=true when served over HTTPS. Calendar, sign-in, assistant and push
+// settings are read in config.go; each is optional and the app runs with none of them set.
 package main
 
 import (
 	"context"
-	"crypto/rand"
 	"errors"
 	"flag"
 	"log"
@@ -47,11 +46,13 @@ func main() {
 }
 
 func run(addr, dbPath, static string) error {
-	secret := []byte(os.Getenv("JWT_SECRET"))
-	if len(secret) == 0 {
-		secret = make([]byte, 32)
-		_, _ = rand.Read(secret)
-		log.Print("JWT_SECRET not set: using a random key, so everyone is logged out when the server restarts")
+	secret, err := sessionSecret(os.Getenv("JWT_SECRET"), os.Getenv("GIN_MODE"))
+	if err != nil {
+		return err
+	}
+	secure := os.Getenv("SECURE_COOKIES") == "true"
+	if !secure && os.Getenv("GIN_MODE") == "release" {
+		log.Print("SECURE_COOKIES is not true: fine on localhost, but set it whenever this is served over HTTPS")
 	}
 
 	cfg, err := loadConfig()
@@ -85,6 +86,9 @@ func run(addr, dbPath, static string) error {
 			return err
 		}
 		log.Printf("demo: sign in as %s / %s", demo.Email, demo.Password)
+		if os.Getenv("GIN_MODE") == "release" {
+			log.Print("demo: DEMO=true in release mode: anyone can sign in to the demo account with this public password")
+		}
 	}
 	g.Go(func() error { return cal.Run(ctx) })        // debounced syncs, or polling without PUBLIC_URL
 	g.Go(func() error { return cal.RunRenewer(ctx) }) // push channels expire after about a week
@@ -107,10 +111,16 @@ func run(addr, dbPath, static string) error {
 		Addr: addr,
 		Handler: api.NewRouter(api.Deps{
 			DB: db, Hub: hub, Engine: timers, Calendar: cal, Plans: planSvc, Dispatcher: dispatcher,
-			Assistant: cfg.newAssistant(db, planSvc),
-			Auth:      auth.NewManager(secret, os.Getenv("SECURE_COOKIES") == "true"),
+			Assistant:      cfg.newAssistant(db, planSvc),
+			Auth:           auth.NewManager(secret, secure, db),
+			Login:          cfg.newLogin(ctx),
+			TrustedProxies: cfg.trustedProxies,
 		}, static),
+		// No overall read or write timeout: event streams stay open for hours. Headers are
+		// bounded here, and bodies by the readBody middleware.
 		ReadHeaderTimeout: 5 * time.Second,
+		IdleTimeout:       2 * time.Minute,
+		MaxHeaderBytes:    64 << 10,
 	}
 	g.Go(func() error {
 		host := addr

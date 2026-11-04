@@ -28,6 +28,8 @@ export interface User {
   email: string;
   name: string;
   settings: Settings;
+  has_password: boolean;
+  google_linked: boolean;
 }
 
 export interface Preset {
@@ -242,7 +244,7 @@ export type LiveEvent =
   | { type: 'session.discarded'; data: null }
   | { type: 'break.completed'; data: { completed: boolean } }
   | { type: 'session.reflected'; data: { id: number } }
-  | { type: 'changed'; data: { kind: 'presets' | 'tasks' | 'sessions' | 'settings' | 'schedule' } }
+  | { type: 'changed'; data: { kind: 'presets' | 'tasks' | 'sessions' | 'settings' | 'schedule' | 'account' } }
   | { type: 'calendar.synced'; data: { account_id: number; changed: number } }
   | { type: 'plan.proposed'; data: { plan_id: number } }
   | { type: 'plan.accepted'; data: { plan_id: number; block_ids: number[] } }

@@ -13,8 +13,9 @@ import (
 // Provider is one external calendar service.
 type Provider interface {
 	Name() string
-	AuthURL(state string) string
-	Exchange(ctx context.Context, code string) (*Credentials, error)
+	// AuthURL and Exchange carry a PKCE verifier: the code is useless without it.
+	AuthURL(state, verifier string) string
+	Exchange(ctx context.Context, code, verifier string) (*Credentials, error)
 	// Sync returns changes since the cursor. An empty cursor means a full pull of the window.
 	Sync(ctx context.Context, cred *Credentials, cursor string, window Window) (Changes, error)
 	// Watch registers a push channel; the provider echoes token on every notification.

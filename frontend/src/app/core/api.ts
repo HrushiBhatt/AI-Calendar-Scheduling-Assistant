@@ -36,6 +36,11 @@ export class Api {
   register = (email: string, password: string, name: string) =>
     this.send<User>('POST', '/api/auth/register', { email, password, name, time_zone: browserZone() });
   logout = () => this.send<void>('POST', '/api/auth/logout');
+  logoutEverywhere = () => this.send<void>('POST', '/api/auth/logout-all');
+  authProviders = () => this.get<{ google: boolean }>('/api/auth/providers');
+  unlinkGoogle = () => this.send<void>('DELETE', '/api/auth/google');
+  changePassword = (current: string, next: string) =>
+    this.send<void>('PUT', '/api/me/password', { current, new: next });
   saveSettings = (settings: Settings) => this.send<Settings>('PUT', '/api/me/settings', settings);
 
   // custom modes

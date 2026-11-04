@@ -1,17 +1,51 @@
 # ---- secrets & local config: never commit these -------------------------------
 # Real values live in .env (copy .env.example); keys and certificates stay local.
+# CI also scans every commit with gitleaks, in case something gets past these rules.
 .env
 .env.*
 !.env.example
+.envrc
+.netrc
+.npmrc
 *.pem
 *.key
 *.p12
+*.pfx
+*.jks
+*.keystore
+*.crt
+*.cer
+*.der
+*.gpg
+*.asc
+id_rsa*
+id_ed25519*
+*.secret
+*.secrets
+secrets/
+.secrets/
 
-# SQLite databases hold user accounts (emails, password hashes) and sessions.
+# Google Cloud downloads its OAuth client and service account keys as JSON files.
+client_secret*.json
+credentials*.json
+service-account*.json
+*-service-account.json
+token.json
+tokens.json
+
+# SQLite databases hold user accounts (emails, password hashes) and sessions, and backups
+# or dumps of them hold exactly the same data.
 *.db
 *.db-*
 *.sqlite
 *.sqlite3
+*.sqlite-*
+*.sqlite3-*
+*.dump
+*.sql.gz
+*.bak
+*.backup
+backups/
 
 # ---- build output & dependencies ---------------------------------------------
 node_modules/
@@ -22,6 +56,9 @@ frontend/out-tsc/
 frontend/test-results/
 frontend/playwright-report/
 backend/bin/
+*.test
+*.out
+*.prof
 
 # ---- editor & OS noise -------------------------------------------------------------
 .DS_Store

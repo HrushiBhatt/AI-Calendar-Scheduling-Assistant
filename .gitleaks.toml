@@ -1,0 +1,14 @@
+# Secret scanning, run over the whole git history in CI and by `make audit`.
+title = "Brew Focus"
+
+[extend]
+useDefault = true
+
+# Test fixtures only. Nothing here protects real data: each value is made up for a test.
+[[allowlists]]
+description = "Throwaway keys in tests, and the empty template"
+paths = [
+  '''backend/.*_test\.go$''',
+  '''frontend/playwright\.config\.ts$''',
+  '''\.env\.example$''',
+]

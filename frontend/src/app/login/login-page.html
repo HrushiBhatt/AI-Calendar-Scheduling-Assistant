@@ -29,6 +29,9 @@
           [attr.autocomplete]="mode() === 'login' ? 'current-password' : 'new-password'"
         />
       </label>
+      @if (mode() === 'register') {
+        <p class="password-hint">At least {{ minPassword }} characters. A few unrelated words work well.</p>
+      }
       @if (error()) {
         <p class="form-error" role="alert">{{ error() }}</p>
       }
@@ -36,5 +39,10 @@
         {{ busy() ? 'Brewing…' : mode() === 'login' ? 'Log in' : 'Create account' }}
       </button>
     </form>
+
+    @if (providers.value()?.google) {
+      <p class="or" aria-hidden="true">or</p>
+      <a class="btn px google" href="/api/auth/google/start">Continue with Google</a>
+    }
   </section>
 </main>

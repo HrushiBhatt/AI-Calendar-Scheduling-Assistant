@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"log"
+	"net/netip"
 	"net/url"
 	"os"
 	"strconv"
@@ -15,17 +18,23 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/assistant"
+	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/auth"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/calendar"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/plans"
 	"github.com/HrushiBhatt/Productivity-Manager/backend/internal/store"
 )
+
+// minSecretBytes matches the HS256 key size: 32 random bytes, or 64 hex characters.
+const minSecretBytes = 32
 
 // config is the optional-feature configuration. Every feature degrades on its own: no
 // Google keys means no calendar (the planner works off an empty busy set), no Anthropic
 // key means the form path, no PUBLIC_URL means polling instead of push.
 type config struct {
 	googleID, googleSecret, googleRedirect string
-	calendarProvider                       string // "fake" connects to an in-memory calendar (end-to-end tests)
+	googleLoginRedirect                    string   // enables "Continue with Google"
+	trustedProxies                         []string // who may report a client's real IP
+	calendarProvider                       string   // "fake" connects to an in-memory calendar (end-to-end tests)
 	publicURL                              string
 	anthropicKey                           string
 	assistantProvider                      string // "stub" uses the phrase-matching stand-in (end-to-end tests)
@@ -34,14 +43,15 @@ type config struct {
 
 func loadConfig() (*config, error) {
 	c := &config{
-		googleID:          os.Getenv("GOOGLE_CLIENT_ID"),
-		googleSecret:      os.Getenv("GOOGLE_CLIENT_SECRET"),
-		googleRedirect:    os.Getenv("GOOGLE_REDIRECT_URL"),
-		calendarProvider:  os.Getenv("CALENDAR_PROVIDER"),
-		publicURL:         strings.TrimRight(os.Getenv("PUBLIC_URL"), "/"),
-		anthropicKey:      os.Getenv("ANTHROPIC_API_KEY"),
-		assistantProvider: os.Getenv("ASSISTANT_PROVIDER"),
-		assistant:         assistant.Options{Model: os.Getenv("ASSISTANT_MODEL"), Effort: os.Getenv("ASSISTANT_EFFORT")},
+		googleID:            os.Getenv("GOOGLE_CLIENT_ID"),
+		googleSecret:        os.Getenv("GOOGLE_CLIENT_SECRET"),
+		googleRedirect:      os.Getenv("GOOGLE_REDIRECT_URL"),
+		googleLoginRedirect: os.Getenv("GOOGLE_LOGIN_REDIRECT_URL"),
+		calendarProvider:    os.Getenv("CALENDAR_PROVIDER"),
+		publicURL:           strings.TrimRight(os.Getenv("PUBLIC_URL"), "/"),
+		anthropicKey:        os.Getenv("ANTHROPIC_API_KEY"),
+		assistantProvider:   os.Getenv("ASSISTANT_PROVIDER"),
+		assistant:           assistant.Options{Model: os.Getenv("ASSISTANT_MODEL"), Effort: os.Getenv("ASSISTANT_EFFORT")},
 	}
 	if raw := os.Getenv("ASSISTANT_DAILY_TOKENS"); raw != "" {
 		n, err := strconv.Atoi(raw)
@@ -53,15 +63,25 @@ func loadConfig() (*config, error) {
 	if c.assistantProvider != "" && c.assistantProvider != "stub" {
 		return nil, fmt.Errorf("ASSISTANT_PROVIDER must be empty or \"stub\", not %q", c.assistantProvider)
 	}
-	set := 0
-	for _, v := range []string{c.googleID, c.googleSecret, c.googleRedirect} {
-		if v != "" {
-			set++
+	if (c.googleID == "") != (c.googleSecret == "") {
+		return nil, errors.New("set both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or neither")
+	}
+	if c.googleID == "" && (c.googleRedirect != "" || c.googleLoginRedirect != "") {
+		return nil, errors.New("GOOGLE_REDIRECT_URL and GOOGLE_LOGIN_REDIRECT_URL need GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET")
+	}
+	if c.googleID != "" && c.googleRedirect == "" && c.googleLoginRedirect == "" {
+		return nil, errors.New("Google keys need GOOGLE_REDIRECT_URL (calendar), GOOGLE_LOGIN_REDIRECT_URL (sign-in), or both")
+	}
+	for _, redirect := range []string{c.googleRedirect, c.googleLoginRedirect} {
+		if err := checkRedirect(redirect); err != nil {
+			return nil, err
 		}
 	}
-	if set != 0 && set != 3 {
-		return nil, errors.New("set all of GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and GOOGLE_REDIRECT_URL, or none of them")
+	proxies, err := parseProxies(os.Getenv("TRUSTED_PROXIES"))
+	if err != nil {
+		return nil, err
 	}
+	c.trustedProxies = proxies
 	if err := store.SetSealKey(os.Getenv("CALENDAR_ENC_KEY")); err != nil {
 		return nil, err
 	}
@@ -119,7 +139,71 @@ func (c *config) newAssistant(db *gorm.DB, planSvc *plans.Service) *assistant.As
 	return nil
 }
 
-func (c *config) google() bool { return c.googleID != "" }
+func (c *config) google() bool { return c.googleID != "" && c.googleRedirect != "" }
+
+// newLogin builds Google sign-in, or returns nil when it isn't configured.
+func (c *config) newLogin(ctx context.Context) auth.LoginProvider {
+	if c.googleLoginRedirect == "" {
+		log.Print("auth: GOOGLE_LOGIN_REDIRECT_URL not set, so sign-in is by password only")
+		return nil
+	}
+	log.Print("auth: Google sign-in enabled")
+	return auth.NewGoogleLogin(ctx, c.googleID, c.googleSecret, c.googleLoginRedirect)
+}
+
+// sessionSecret returns the key that signs session cookies. Release mode refuses to start
+// without a strong one: a guessable key lets anyone forge a session for any user. Elsewhere
+// a random key is fine, at the cost of signing everyone out on each restart.
+func sessionSecret(raw, ginMode string) ([]byte, error) {
+	switch {
+	case raw != "" && len(raw) < minSecretBytes:
+		return nil, fmt.Errorf("JWT_SECRET must be at least %d bytes (openssl rand -hex 32)", minSecretBytes)
+	case raw != "":
+		return []byte(raw), nil
+	case ginMode == "release":
+		return nil, errors.New("JWT_SECRET is required in release mode (openssl rand -hex 32)")
+	}
+	secret := make([]byte, minSecretBytes)
+	if _, err := rand.Read(secret); err != nil {
+		return nil, err
+	}
+	log.Print("JWT_SECRET not set: using a random key, so everyone is logged out when the server restarts")
+	return secret, nil
+}
+
+// checkRedirect insists on HTTPS outside local development: the redirect carries the
+// authorization code, which must not cross the network in the clear.
+func checkRedirect(raw string) error {
+	if raw == "" {
+		return nil
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return fmt.Errorf("%q isn't a valid OAuth redirect URL", raw)
+	}
+	local := u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1"
+	if u.Scheme != "https" && !(u.Scheme == "http" && local) {
+		return fmt.Errorf("the OAuth redirect URL %q must be https (or http on localhost)", raw)
+	}
+	return nil
+}
+
+// parseProxies reads TRUSTED_PROXIES: comma-separated addresses or CIDR ranges.
+func parseProxies(raw string) ([]string, error) {
+	var proxies []string
+	for _, p := range strings.Split(raw, ",") {
+		if p = strings.TrimSpace(p); p == "" {
+			continue
+		}
+		if _, err := netip.ParseAddr(p); err != nil {
+			if _, err := netip.ParsePrefix(p); err != nil {
+				return nil, fmt.Errorf("TRUSTED_PROXIES: %q is not an address or CIDR range", p)
+			}
+		}
+		proxies = append(proxies, p)
+	}
+	return proxies, nil
+}
 
 // checkSealedAccounts refuses to start without the key once tokens are stored: running on
 // would fail every sync with a decryption error instead of saying what is wrong.
