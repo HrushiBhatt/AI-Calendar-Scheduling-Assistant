@@ -10,7 +10,8 @@ export JWT_SECRET SECURE_COOKIES TRUSTED_PROXIES ADDR DB_PATH GOOGLE_CLIENT_ID G
 # Switch to the Node version in .nvmrc (Angular 22 needs 24.15+) when nvm is installed, so
 # frontend targets work even in a terminal still holding an older Node on its PATH.
 NVM_SH = $${NVM_DIR:-$$HOME/.nvm}/nvm.sh
-NODE = if [ -s "$(NVM_SH)" ]; then . "$(NVM_SH)" --no-use && nvm use --silent >/dev/null \
+# CI sets up its own Node, and GitHub's runners have an nvm that doesn't know that version.
+NODE = if [ -z "$$CI" ] && [ -s "$(NVM_SH)" ]; then . "$(NVM_SH)" --no-use && nvm use --silent >/dev/null \
 	|| { echo "Node $$(cat .nvmrc) isn't installed. Run: nvm install" >&2; exit 1; }; fi;
 
 install: ## fetch Go modules and npm packages
