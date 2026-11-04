@@ -62,3 +62,20 @@
   font-size: 0.85rem;
   color: var(--danger);
 }
+
+.password-hint {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  text-align: left;
+}
+
+.or {
+  margin: 12px 0;
+  font-size: 0.75rem;
+  color: var(--gray-500);
+}
+
+.google {
+  display: block;
+  text-decoration: none;
+}

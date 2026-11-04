@@ -26,6 +26,12 @@
               }
             ],
             "styles": [
+              "@fontsource/press-start-2p/latin-400.css",
+              "@fontsource/outfit/latin-300.css",
+              "@fontsource/outfit/latin-400.css",
+              "@fontsource/outfit/latin-500.css",
+              "@fontsource/outfit/latin-600.css",
+              "@fontsource/outfit/latin-700.css",
               "src/styles.css"
             ]
           },
@@ -43,7 +49,15 @@
                   "maximumError": "16kB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                },
+                "fonts": false
+              }
             },
             "development": {
               "optimization": false,

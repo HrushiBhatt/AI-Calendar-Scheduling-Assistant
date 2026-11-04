@@ -4,6 +4,7 @@ import { Brew } from '../core/brew';
 import { Settings } from '../core/models';
 import { browserZone } from '../core/time';
 import { Modal } from '../shared/modal';
+import { AccountSecurity } from './account-security';
 import { CalendarSettings } from './calendar-settings';
 
 type Toggle = 'sound' | 'notify' | 'autoBreak' | 'strict';
@@ -37,7 +38,7 @@ function zones(): string[] {
 
 @Component({
   selector: 'app-settings-dialog',
-  imports: [Modal, CalendarSettings],
+  imports: [Modal, CalendarSettings, AccountSecurity],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-modal title="Settings" (closed)="brew.dialog.set(null)">
@@ -97,6 +98,8 @@ function zones(): string[] {
         </section>
 
         <app-calendar-settings />
+
+        <app-account-security />
 
         <p class="setting-hint">Settings are saved to your account, so they follow you to every device.</p>
         <p class="shortcuts"><kbd>Space</kbd> start / pause · <kbd>R</kbd> reset · <kbd>S</kbd> finish or skip</p>

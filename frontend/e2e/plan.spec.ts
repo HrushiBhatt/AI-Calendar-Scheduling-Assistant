@@ -51,3 +51,63 @@ test('plan, accept two of three, and see them everywhere', async ({ browser }) =
   await expect(other.locator('app-block-chip[data-status="accepted"]')).toHaveCount(2);
   await expect(other.locator('app-block-chip[data-status="proposed"]')).toHaveCount(0);
 });
+
+test('the page runs under its security policy, and signing out ends the session', async ({ browser }) => {
+  const page = await newPage(browser);
+  const violations: string[] = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error' && /Content Security Policy/i.test(m.text())) violations.push(m.text());
+  });
+  const offsite: string[] = [];
+  page.on('request', (r) => {
+    if (!r.url().startsWith('http://127.0.0.1') && !/^(data|blob):/.test(r.url())) offsite.push(r.url());
+  });
+  const response = await page.goto('/login');
+  const csp = response?.headers()['content-security-policy'] ?? '';
+  expect(csp).toContain("script-src 'self'");
+  expect(response?.headers()['x-frame-options']).toBe('DENY');
+
+  // Styles and the self-hosted fonts really apply under the policy.
+  await expect(page.locator('.title')).toHaveCSS('font-family', /Press Start 2P/);
+  await page.evaluate(() => document.fonts.ready);
+  expect(await page.evaluate(() => document.fonts.check('12px "Press Start 2P"'))).toBe(true);
+
+  // An injected inline script is blocked by the browser itself.
+  expect(
+    await page.evaluate(() => {
+      const script = document.createElement('script');
+      script.textContent = 'window.__injected = true';
+      document.body.append(script);
+      return (window as unknown as { __injected?: boolean }).__injected ?? false;
+    }),
+  ).toBe(false);
+  expect(violations.length).toBe(1); // that one script, and nothing the app itself does
+  violations.length = 0;
+
+  // A new password that's easy to guess is refused, with the server's reason.
+  await page.getByRole('tab', { name: 'Sign up' }).click();
+  const owner = `session-${Date.now()}@example.com`;
+  await page.locator('input[type=email]').fill(owner);
+  await page.locator('input[type=password]').fill('password1234');
+  await page.locator('form .btn-primary').click();
+  await expect(page.getByRole('alert')).toContainText('too easy to guess');
+  await page.locator('input[type=password]').fill(password);
+  await page.locator('form .btn-primary').click();
+  await expect(page).toHaveURL(/\/$/);
+
+  // The session cookie can't be read by page scripts.
+  expect(await page.evaluate(() => document.cookie)).not.toContain('bf_session');
+
+  // A thief copies the cookie, then the owner signs out: the copy stops working.
+  const context = page.context();
+  const thief = await browser.newContext();
+  await thief.addCookies((await context.cookies()).filter((c) => c.name === 'bf_session'));
+  expect((await thief.request.get('/api/me')).status()).toBe(200);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: 'Log out' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  expect((await thief.request.get('/api/me')).status()).toBe(401);
+
+  expect(violations).toEqual([]);
+  expect(offsite).toEqual([]); // no third party learns who visits: not even a font server
+});

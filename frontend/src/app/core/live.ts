@@ -1,5 +1,8 @@
-import { Injectable, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Injectable, inject, signal } from '@angular/core';
 import { Subject } from 'rxjs';
+import { Api } from './api';
+import { Auth } from './auth';
 import { LiveEvent } from './models';
 
 const EVENT_TYPES: LiveEvent['type'][] = [
@@ -20,16 +23,22 @@ const EVENT_TYPES: LiveEvent['type'][] = [
  * The server's live stream (Server-Sent Events). Every tab and device signed in to
  * the same account receives the same events, which keeps them in sync. EventSource
  * reconnects on its own, and the server opens each connection with a fresh snapshot.
+ * It gives up when a reconnect is refused, which usually means the session was ended from
+ * another device, so that case asks the server rather than leaving a stale page open.
  */
 @Injectable({ providedIn: 'root' })
 export class LiveEvents {
+  private readonly api = inject(Api);
+  private readonly auth = inject(Auth);
   private source?: EventSource;
+  private wanted = false;
   private readonly subject = new Subject<LiveEvent>();
 
   readonly events$ = this.subject.asObservable();
   readonly connected = signal(false);
 
   connect(): void {
+    this.wanted = true;
     if (this.source) return;
     const source = new EventSource('/api/events'); // same origin, so the login cookie goes along
     for (const type of EVENT_TYPES) {
@@ -38,11 +47,34 @@ export class LiveEvents {
       );
     }
     source.onopen = () => this.connected.set(true);
-    source.onerror = () => this.connected.set(source.readyState === EventSource.OPEN);
+    source.onerror = () => {
+      this.connected.set(source.readyState === EventSource.OPEN);
+      if (source.readyState === EventSource.CLOSED) void this.recheck();
+    };
     this.source = source;
   }
 
   disconnect(): void {
+    this.wanted = false;
+    this.close();
+  }
+
+  private async recheck(): Promise<void> {
+    this.close();
+    try {
+      await this.api.me();
+    } catch (err) {
+      if (err instanceof HttpErrorResponse && err.status === 401) {
+        if (this.wanted) this.auth.expire();
+        return;
+      }
+    }
+    setTimeout(() => {
+      if (this.wanted) this.connect();
+    }, 5000); // the server was briefly unwell, not the session
+  }
+
+  private close(): void {
     this.source?.close();
     this.source = undefined;
     this.connected.set(false);

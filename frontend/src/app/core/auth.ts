@@ -4,6 +4,7 @@ import { CanActivateFn, Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { Api } from './api';
 import { User } from './models';
+import { browserZone } from './time';
 
 /** The signed-in user. The session itself is an HttpOnly cookie the browser manages. */
 @Injectable({ providedIn: 'root' })
@@ -16,11 +17,19 @@ export class Auth {
 
   async restore(): Promise<User | null> {
     try {
-      this.user.set(await this.api.me());
+      const user = await this.api.me();
+      this.user.set(user);
+      if (!user.settings.timeZone) await this.adoptBrowserZone(user);
     } catch {
       this.user.set(null);
     }
     return this.user()!;
+  }
+
+  /** An account made through Google has no time zone yet: sign-up can't ask the browser for one. */
+  private async adoptBrowserZone(user: User): Promise<void> {
+    const settings = await this.api.saveSettings({ ...user.settings, timeZone: browserZone() });
+    this.user.set({ ...user, settings });
   }
 
   async login(email: string, password: string): Promise<void> {
@@ -33,6 +42,12 @@ export class Auth {
 
   async logout(): Promise<void> {
     await this.api.logout().catch(() => undefined);
+    this.expire();
+  }
+
+  /** End the session on every device, this one included. */
+  async logoutEverywhere(): Promise<void> {
+    await this.api.logoutEverywhere();
     this.expire();
   }
 

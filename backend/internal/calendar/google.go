@@ -48,12 +48,12 @@ func (g *Google) Name() string { return "google" }
 
 // AuthURL asks for offline access with a forced consent screen: without both, Google
 // issues no refresh token on a second connection and sync stops when the hour is up.
-func (g *Google) AuthURL(state string) string {
-	return g.config.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
+func (g *Google) AuthURL(state, verifier string) string {
+	return g.config.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.ApprovalForce, oauth2.S256ChallengeOption(verifier))
 }
 
-func (g *Google) Exchange(ctx context.Context, code string) (*Credentials, error) {
-	tok, err := g.config.Exchange(ctx, code)
+func (g *Google) Exchange(ctx context.Context, code, verifier string) (*Credentials, error) {
+	tok, err := g.config.Exchange(ctx, code, oauth2.VerifierOption(verifier))
 	if err != nil {
 		return nil, scrub(fmt.Errorf("google: exchanging the code: %w", tokenError(err)), nil)
 	}

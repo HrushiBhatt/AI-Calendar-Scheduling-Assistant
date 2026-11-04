@@ -58,7 +58,7 @@ func meeting(id string, startHour, endHour int) Event {
 
 func (f *fixture) connect(t *testing.T) store.CalendarAccount {
 	t.Helper()
-	acct, err := f.svc.Connect(t.Context(), f.user, "fake-code")
+	acct, err := f.svc.Connect(t.Context(), f.user, "fake-code", "")
 	if err != nil {
 		t.Fatal(err)
 	}

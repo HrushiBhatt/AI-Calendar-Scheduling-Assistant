@@ -51,11 +51,11 @@ func NewFake(name, account string) *Fake {
 func (f *Fake) Name() string { return f.name }
 
 // AuthURL points straight back at our own callback: there is no consent screen to visit.
-func (f *Fake) AuthURL(state string) string {
+func (f *Fake) AuthURL(state, _ string) string {
 	return "/api/calendar/callback?code=fake-code&state=" + url.QueryEscape(state)
 }
 
-func (f *Fake) Exchange(_ context.Context, code string) (*Credentials, error) {
+func (f *Fake) Exchange(_ context.Context, code, _ string) (*Credentials, error) {
 	if code != "fake-code" {
 		return nil, errors.New("fake: unknown authorization code")
 	}
