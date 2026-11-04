@@ -1,8 +1,9 @@
-.PHONY: install api web build serve test docker eval e2e demo
+.PHONY: install api web build serve test audit docker eval e2e demo
 
 # Secrets and local config (JWT_SECRET, ...) come from an untracked .env; see .env.example.
 -include .env
-export JWT_SECRET SECURE_COOKIES ADDR DB_PATH GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_REDIRECT_URL \
+export JWT_SECRET SECURE_COOKIES TRUSTED_PROXIES ADDR DB_PATH GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_REDIRECT_URL \
+	GOOGLE_LOGIN_REDIRECT_URL \
 	CALENDAR_ENC_KEY PUBLIC_URL ANTHROPIC_API_KEY ASSISTANT_MODEL ASSISTANT_DAILY_TOKENS ASSISTANT_EFFORT DEMO \
 	CALENDAR_PROVIDER ASSISTANT_PROVIDER
 
@@ -33,6 +34,12 @@ test: ## Go tests under the race detector, then Angular unit tests
 	cd backend && go vet ./... && go test -race ./...
 	$(NODE) cd frontend && npx ng test --watch=false
 
+audit: ## the security scans CI runs: vulnerable dependencies, risky code, leaked secrets
+	cd backend && go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+	cd backend && go run github.com/securego/gosec/v2/cmd/gosec@v2.29.0 -quiet ./...
+	cd backend && go run github.com/zricethezav/gitleaks/v8@v8.30.1 git --redact --no-banner --config ../.gitleaks.toml ..
+	$(NODE) cd frontend && npm audit --omit=dev --audit-level=high
+
 eval: ## run the assistant's eval set against the real model (costs a few cents; needs ANTHROPIC_API_KEY)
 	cd backend && go test -tags evals -run TestEvals -count=1 -v ./internal/assistant
 
@@ -41,4 +48,4 @@ demo: ## the app with a seeded demo account (demo@brewfocus.dev / brewfocus) and
 
 docker: ## build and run the production image (data persists in the brewfocus-data volume)
 	docker build -t brew-focus .
-	docker run --rm -p 5001:5001 -v brewfocus-data:/data -e JWT_SECRET -e SECURE_COOKIES brew-focus
+	docker run --rm -p 5001:5001 -v brewfocus-data:/data -e JWT_SECRET -e SECURE_COOKIES -e TRUSTED_PROXIES brew-focus
