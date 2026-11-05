@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="mug" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f5f0e8"/>
+      <stop offset="50%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e8e0d5"/>
+    </linearGradient>
+    <linearGradient id="coffee" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#8B6B4C"/>
+      <stop offset="100%" stop-color="#4a2c17"/>
+    </linearGradient>
+  </defs>
+  <path d="M12 18 Q10 45 14 54 Q18 60 32 60 Q46 60 50 54 Q54 45 52 18 Z" fill="url(#mug)" stroke="#d4ccc0" stroke-width="1"/>
+  <path d="M14 22 Q13 42 16 50 Q20 56 32 56 Q44 56 48 50 Q51 42 50 22 Z" fill="url(#coffee)"/>
+  <ellipse cx="32" cy="18" rx="20" ry="4" fill="url(#mug)" stroke="#d4ccc0" stroke-width="1"/>
+  <path d="M52 24 Q62 24 62 38 Q62 52 52 52" fill="none" stroke="url(#mug)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M24 10 Q22 6 26 4" fill="none" stroke="#D4A574" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+  <path d="M32 8 Q30 4 34 2" fill="none" stroke="#D4A574" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+  <path d="M40 10 Q38 6 42 4" fill="none" stroke="#D4A574" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+</svg>
