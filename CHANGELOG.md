@@ -2,11 +2,27 @@
 
 Newest first. The git history has the full detail.
 
+## 2026-11-05: a simple Go backend, JWT sign-in and Docker
+
+**Added**
+- A Go server, restored from `b2e0356` and made smaller: a goroutine per timer, live updates over Server-Sent Events, Gin, and GORM with SQLite. Go's concurrency suits many timers running at once, and it builds to one static binary.
+- JWT sign-in, with the token in an HttpOnly cookie and bcrypt for passwords. A session row behind each token makes logging out instant.
+- A multi-stage Docker image and `docker-compose.yml`.
+- Comments in every Go package explaining its design decisions.
+
+**Changed**
+- The GitHub Pages site stays browser-only, because Pages can't run Go. It shares every screen with the server build, and its in-browser store answers the same API calls.
+- The Pages deploy now waits for the Go tests and the browser tests against the Go server.
+- The README now explains why each Go tool was chosen.
+
+**Left out on purpose**
+- Google sign-in, the demo account, and the time-zone database driver, to keep the backend simple.
+
 ## 2026-11-04: browser only, with no sign-in
 
 **Removed**
 - Sign-in, including Google, along with accounts and the password rules.
-- The Go server, Docker image and sample data. GitHub Pages can't run a server, and one without sign-in would show every visitor the same data. The last version with the server is commit `b2e0356`.
+- The Go server, Docker image and sample data. GitHub Pages can't run a server, and one without sign-in would show every visitor the same data.
 
 **Changed**
 - Everything is saved in the browser, and a first visit starts empty.

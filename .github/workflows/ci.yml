@@ -20,11 +20,28 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
-          go-version: '1.27'
-          cache: false
-      - run: go run github.com/zricethezav/gitleaks/v8@v8.30.1 git --redact --no-banner --config .gitleaks.toml .
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - run: go run github.com/zricethezav/gitleaks/v8@v8.30.1 git --redact --no-banner --config ../.gitleaks.toml ..
+        working-directory: backend
 
-  test:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - run: go vet ./...
+      - run: go test -race ./... # the engine and hub are concurrent: always -race
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+      - run: go run github.com/securego/gosec/v2/cmd/gosec@v2.29.0 -quiet ./...
+
+  frontend:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -40,13 +57,68 @@ jobs:
       # What ships to browsers. Build tools are covered by Dependabot, not this gate.
       - run: npm audit --omit=dev --audit-level=high
       - run: npx ng test --watch=false
+      - run: npx ng build
 
-  # The live site at https://hrushibhatt.github.io/<repo>/. It builds the app, tests that build
-  # the way Pages serves it, and every push to main publishes it to the gh-pages branch, which
-  # Pages serves. The path comes from the repo's name, so renaming the repo can't leave the site
-  # blank: the next push fixes it.
+  # Browser tests of the whole app against the real Go server, sign-in included.
+  e2e:
+    needs: [secrets, backend, frontend]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: playwright-traces
+          path: frontend/test-results
+          retention-days: 7
+
+  image:
+    needs: [secrets, backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: docker build -t brew-focus .
+      # Not trivy-action: its installer downloads from get.trivy.dev, which stopped resolving
+      # on 2026-11-03 (aquasecurity/setup-trivy#42), so the scan died before it could run.
+      # The GitHub release is the same binary, and the hash pins exactly which one we trust.
+      # Dependabot can't update this one: take the hash from the release's checksums file.
+      - name: Install Trivy
+        env:
+          TRIVY_VERSION: 0.76.1
+          TRIVY_SHA256: c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0
+        run: |
+          asset="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/$asset" \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/$asset"
+          echo "$TRIVY_SHA256  $RUNNER_TEMP/$asset" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/$asset" -C "$RUNNER_TEMP" trivy
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - name: Scan the image
+        run: trivy image --scanners vuln --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 --timeout 10m brew-focus
+
+  # The live site at https://hrushibhatt.github.io/<repo>/. Pages only serves static files, so
+  # this builds the app with its in-browser backend. It tests that build the way Pages serves
+  # it, and every push to main publishes it. The path
+  # comes from the repo's name, so renaming the repo can't leave the site blank again.
   pages:
-    needs: [secrets, test]
+    # The Docker image job isn't listed on purpose: a newly published vulnerability in a base
+    # image should fail that job, not take the live site offline.
+    needs: [secrets, backend, frontend, e2e]
     runs-on: ubuntu-latest
     permissions:
       contents: write # publishing pushes the gh-pages branch
@@ -67,15 +139,15 @@ jobs:
       - run: npx playwright install --with-deps chromium
         working-directory: frontend
       - name: Build the site
-        run: make build BASE="$PAGES_BASE"
+        run: make pages-build BASE="$PAGES_BASE"
       - name: Test it as Pages serves it
-        run: npm run e2e
+        run: npm run e2e:pages
         working-directory: frontend
       - name: Keep the traces of a failed test
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: playwright-traces
+          name: playwright-pages-traces
           path: frontend/test-results
           retention-days: 7
       - name: Publish

@@ -1,0 +1,26 @@
+# Runs the whole app with one command: docker compose up --build
+# Then open http://localhost:5001. Compose reads JWT_SECRET and SECURE_COOKIES from .env.
+services:
+  brewfocus:
+    build: .
+    ports:
+      - '5001:5001'
+    environment:
+      # Stops with this message rather than starting with a guessable signing key.
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env (openssl rand -hex 32)}
+      # False so sign-in works on http://localhost. Set it to true behind HTTPS.
+      SECURE_COOKIES: ${SECURE_COOKIES:-false}
+    volumes:
+      - brewfocus-data:/data # the SQLite file, kept when the container is replaced
+    restart: unless-stopped
+    # The server already shuts down cleanly on SIGTERM; this gives open timers time to save.
+    stop_grace_period: 15s
+    # A read-only filesystem and no extra privileges: only /data can be written.
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  brewfocus-data:

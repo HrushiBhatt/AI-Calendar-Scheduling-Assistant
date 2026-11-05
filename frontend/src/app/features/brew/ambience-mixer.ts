@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Ambience } from '../../core/sound/ambience';
 import { tick } from '../../core/sound/audio';
 import { Brew } from '../../core/state/brew';
-import { TickStyle } from '../../core/data/models';
+import { TickStyle } from '../../core/api/models';
 
 const LAYERS = [
   { id: 'rain', label: 'Rain', icon: '🌧️' },

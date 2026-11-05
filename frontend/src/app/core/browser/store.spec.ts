@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { localDay } from '../state/time';
-import { Session, StoreEvent } from './models';
+import { LiveEvent, Session } from '../api/models';
 import { STORAGE_KEY, Store } from './store';
 
 const focus = { mode: 'Pomodoro', planned: 1500, intention: 'Write', task_id: null, day: '2026-11-04' };
@@ -17,7 +17,7 @@ const dayOf = (n: number) => {
 
 describe('Store', () => {
   let store: Store;
-  let events: StoreEvent[];
+  let events: LiveEvent[];
 
   /** A fresh store, as on page load, with this already saved. */
   const open = (saved?: unknown) => {
@@ -129,7 +129,7 @@ describe('Store', () => {
       throw new DOMException('full', 'QuotaExceededError');
     });
     store.createTask('Kept for now', 1);
-    expect(store.unsaved()).toBe(true);
+    expect(events.some((e) => e.type === 'save.failed')).toBe(true);
     write.mockRestore();
   });
 });

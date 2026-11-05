@@ -1,23 +1,13 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
 import { CAFE } from '../../shared/pixel-art/sprites';
+import { FocusRequest, LiveEvent, Phase, Preset, Session, Settings, Stats, Task, TimerAction, TimerState } from '../api/models';
 import { localDay } from '../state/time';
-import {
-  FocusRequest,
-  Phase,
-  Preset,
-  Session,
-  Settings,
-  Stats,
-  StoreEvent,
-  Task,
-  TimerAction,
-  TimerState,
-} from './models';
 
 /**
- * Everything the app knows lives here, in this browser's localStorage. There is no server and
- * no account, so nothing ever leaves the device. Three things make that work across tabs:
+ * The backend for the GitHub Pages build, where the Go server can't run. Everything lives in this
+ * browser's localStorage, with no account, and nothing leaves the device. It follows the same
+ * rules as the server. Three things make it work across tabs:
  *
  *  - localStorage is the one source of truth, read again on every call.
  *  - Events reach other tabs over a BroadcastChannel.
@@ -71,18 +61,17 @@ export const errorMessage = (err: unknown): string => (err instanceof Error ? er
 
 @Injectable({ providedIn: 'root' })
 export class Store {
-  private readonly events = new Subject<StoreEvent>();
+  private readonly events = new Subject<LiveEvent>();
   private readonly channel = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(STORAGE_KEY);
   private memory?: Db; // what's kept when localStorage is blocked or full
   private alarm?: ReturnType<typeof setTimeout>;
+  private warned = false;
 
   /** Events from this tab and every other open tab. */
   readonly events$ = this.events.asObservable();
-  /** True once a save has failed (private mode, or storage full). Changes then last until the tab closes. */
-  readonly unsaved = signal(false);
 
   constructor() {
-    this.channel?.addEventListener('message', (e: MessageEvent<StoreEvent>) => this.events.next(e.data));
+    this.channel?.addEventListener('message', (e: MessageEvent<LiveEvent>) => this.events.next(e.data));
     addEventListener('storage', (e) => {
       if (e.key === STORAGE_KEY) this.arm(); // another tab changed the timer
     });
@@ -144,18 +133,21 @@ export class Store {
       .map((t) => ({ ...t, brews: totals.get(t.id)?.brews ?? 0, minutes: Math.floor((totals.get(t.id)?.seconds ?? 0) / 60) }));
   }
 
-  createTask(title: string, estimate: number): void {
+  createTask(title: string, estimate: number): Task {
     const db = this.read();
-    db.tasks.push({ id: db.nextId++, title: text(title, 'Title', 120, true), estimate: whole(estimate, 'Estimate', 1, 20), done: false });
+    const task: StoredTask = { id: db.nextId++, title: text(title, 'Title', 120, true), estimate: whole(estimate, 'Estimate', 1, 20), done: false };
+    db.tasks.push(task);
     this.save(db, 'tasks');
+    return { ...task, brews: 0, minutes: 0 };
   }
 
-  setTaskDone(id: number, done: boolean): void {
+  setTaskDone(id: number, done: boolean): StoredTask {
     const db = this.read();
     const task = db.tasks.find((t) => t.id === id);
     if (!task) throw new StoreError('That task no longer exists.');
     task.done = done;
     this.save(db, 'tasks');
+    return task;
   }
 
   deleteTask(id: number): void {
@@ -177,13 +169,14 @@ export class Store {
     return this.read().sessions.slice(-limit).reverse();
   }
 
-  reflect(id: number, reflection: string): void {
+  reflect(id: number, reflection: string): Session {
     const db = this.read();
     const session = db.sessions.find((s) => s.id === id);
     if (!session) throw new StoreError('That session no longer exists.');
     session.reflection = text(reflection, 'Reflection', 280);
     this.write(db);
     this.publish({ type: 'session.reflected', data: { id } }); // the other tabs can close their prompt
+    return session;
   }
 
   clearSessions(): void {
@@ -310,7 +303,7 @@ export class Store {
     const t = db.timer!;
     db.timer = null;
     const elapsed = t.duration_ms - (completed ? 0 : remainingOf(t));
-    let announce: StoreEvent;
+    let announce: LiveEvent;
     if (t.phase === 'break') {
       announce = { type: 'break.completed', data: { completed } };
     } else if (!completed && elapsed < MIN_LOGGED_MS) {
@@ -357,7 +350,9 @@ export class Store {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
     } catch {
-      this.unsaved.set(true);
+      // Private mode, or storage full. Changes last until the tab closes, so say so once.
+      if (!this.warned) this.events.next({ type: 'save.failed', data: null });
+      this.warned = true;
     }
   }
 
@@ -367,7 +362,7 @@ export class Store {
     this.publish({ type: 'changed', data: { kind } });
   }
 
-  private publish(event: StoreEvent): void {
+  private publish(event: LiveEvent): void {
     this.events.next(event);
     this.channel?.postMessage(event);
   }
@@ -407,7 +402,8 @@ function running(durationMs: number): Omit<ActiveTimer, 'phase'> {
 
 /** The timer as the app sees it. */
 function snapshot(t: ActiveTimer | null, phase: Phase = 'focus'): TimerState {
-  if (!t) return { phase, status: 'idle', duration_ms: 0, remaining_ms: 0 };
+  const server_time = new Date().toISOString(); // this device's clock is the only clock here
+  if (!t) return { phase, status: 'idle', duration_ms: 0, remaining_ms: 0, server_time };
   return {
     phase: t.phase,
     status: t.status,
@@ -418,6 +414,7 @@ function snapshot(t: ActiveTimer | null, phase: Phase = 'focus'): TimerState {
     mode: t.mode,
     intention: t.intention,
     task_id: t.task_id ?? undefined,
+    server_time,
   };
 }
 

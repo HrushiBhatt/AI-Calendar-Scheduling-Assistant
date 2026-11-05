@@ -1,7 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { environment } from '../../../environments/environment';
+import { Auth } from '../../core/auth/auth';
 import { Brew } from '../../core/state/brew';
-import { Settings } from '../../core/data/models';
+import { Settings } from '../../core/api/models';
 import { Modal } from '../../shared/modal';
+import { AccountSecurity } from './account-security';
 
 type Toggle = Exclude<keyof Settings, 'tick'>;
 
@@ -16,10 +19,10 @@ const TOGGLES: { key: Toggle; label: string; hint: string }[] = [
   },
 ];
 
-/** Preferences, saved as you change them, and the one way to clear your history. */
+/** Preferences, saved as you change them, and the account. The Pages build has no account. */
 @Component({
   selector: 'app-settings-dialog',
-  imports: [Modal],
+  imports: [Modal, AccountSecurity],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-modal title="Settings" (closed)="brew.dialog.set(null)">
@@ -31,16 +34,43 @@ const TOGGLES: { key: Toggle; label: string; hint: string }[] = [
         </label>
       }
       <p class="shortcuts"><kbd>Space</kbd> start / pause · <kbd>R</kbd> reset · <kbd>S</kbd> finish or skip</p>
-      <p class="setting-hint">Everything stays in this browser and is never sent anywhere. Clearing this site's data deletes it.</p>
+      @if (browserOnly) {
+        <p class="setting-hint">Everything stays in this browser and is never sent anywhere. Clearing this site's data deletes it.</p>
+      } @else {
+        <p class="setting-hint">Settings are saved to your account, so they follow you to every device.</p>
+        <div class="account">
+          <span>Signed in as <b>{{ auth.user()?.email }}</b></span>
+          <button class="btn btn-sm px" (click)="logout()">Log out</button>
+        </div>
+        <app-account-security />
+      }
       <button class="btn btn-danger px" (click)="brew.clearData()">Delete all sessions</button>
     </app-modal>
+  `,
+  styles: `
+    .account {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 0.85rem;
+      color: var(--text-2);
+    }
   `,
 })
 export class SettingsDialog {
   protected readonly brew = inject(Brew);
+  protected readonly auth = inject(Auth);
   protected readonly toggles = TOGGLES;
+  protected readonly browserOnly = environment.browserBackend;
 
   protected set(key: Toggle, event: Event): void {
     void this.brew.updateSettings({ [key]: (event.target as HTMLInputElement).checked });
+  }
+
+  protected async logout(): Promise<void> {
+    this.brew.dialog.set(null);
+    await this.auth.logout();
   }
 }

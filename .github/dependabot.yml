@@ -1,7 +1,14 @@
-# Keeps every dependency patched: npm packages and the CI actions (pinned by commit). Minor and
-# patch updates are grouped so a week's worth arrives as one pull request.
+# Keeps every dependency patched: Go modules, npm packages, the CI actions (pinned by
+# commit) and the Docker base images (pinned by digest). Minor and patch updates are grouped
+# so a week's worth arrives as one pull request.
 version: 2
 updates:
+  - package-ecosystem: gomod
+    directory: /backend
+    schedule: { interval: weekly }
+    groups:
+      go-minor-and-patch:
+        update-types: [minor, patch]
   - package-ecosystem: npm
     directory: /frontend
     schedule: { interval: weekly }
@@ -13,4 +20,10 @@ updates:
     schedule: { interval: weekly }
     groups:
       actions:
+        patterns: ['*']
+  - package-ecosystem: docker
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      base-images:
         patterns: ['*']

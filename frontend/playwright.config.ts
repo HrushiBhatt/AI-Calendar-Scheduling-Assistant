@@ -1,40 +1,36 @@
 import { defineConfig } from '@playwright/test';
 
 /**
- * Tests the site exactly as GitHub Pages serves it: static files under the repo's path. Deploys
- * wait on this, so a broken build can't replace the live site.
- *
- *   make e2e
- *
- * PAGES_URL points the same tests at the real site instead.
+ * End-to-end tests of the app against the real Go server. Run with `npm run e2e`, which
+ * builds the app first.
  */
-const PORT = 5078;
-const live = process.env['PAGES_URL'];
-const base = process.env['PAGES_BASE'] ?? '/BrewFocus/';
-const ci = !!process.env['CI'];
+const PORT = 5077;
 
 export default defineConfig({
   testDir: './e2e',
   timeout: 60_000,
   fullyParallel: false,
-  // CI machines are slower and busier. One retry stops a hiccup from holding up a deploy; a test
-  // that needed it is still reported as flaky.
-  retries: ci ? 1 : 0,
-  reporter: ci ? 'github' : 'list',
+  retries: process.env['CI'] ? 1 : 0,
+  reporter: process.env['CI'] ? 'github' : 'list',
   use: {
-    baseURL: live ?? `http://127.0.0.1:${PORT}${base}`,
+    baseURL: `http://127.0.0.1:${PORT}`,
     timezoneId: 'America/New_York',
     locale: 'en-US',
     // Locally, drive the Chrome that's already installed; CI installs Playwright's Chromium.
-    channel: ci ? undefined : 'chrome',
+    channel: process.env['CI'] ? undefined : 'chrome',
     trace: 'retain-on-failure',
   },
-  webServer: live
-    ? undefined
-    : {
-        command: 'node e2e/serve.mjs',
-        url: `http://127.0.0.1:${PORT}/health`,
-        reuseExistingServer: false,
-        env: { PAGES_PORT: String(PORT), PAGES_BASE: base },
-      },
+  webServer: {
+    command: 'go run ./cmd/server -static ../frontend/dist/brew-focus/browser',
+    cwd: '../backend',
+    url: `http://127.0.0.1:${PORT}/api/health`,
+    timeout: 120_000,
+    reuseExistingServer: false,
+    env: {
+      ADDR: `127.0.0.1:${PORT}`,
+      DB_PATH: ':memory:',
+      GIN_MODE: 'release',
+      JWT_SECRET: 'e2e-secret-e2e-secret-e2e-secret',
+    },
+  },
 });

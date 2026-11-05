@@ -1,31 +1,45 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Api, errorMessage } from '../api/api';
 import { audio, chime, tick } from '../sound/audio';
-import { Completed, FocusRequest, Mode, Phase, Preset, Settings, Stats, StoreEvent, Task, TimerAction } from '../data/models';
-import { Store, errorMessage } from '../data/store';
+import { Auth } from '../auth/auth';
+import { LiveEvents } from '../api/live';
 import { BUILTIN_MODES, fromPreset } from './modes';
+import { Completed, FocusRequest, LiveEvent, Mode, Phase, Preset, Settings, Stats, Task, TimerAction } from '../api/models';
 import { persistedSignal } from './persisted';
 import { formatClock, localDay } from './time';
 import { Timer } from './timer';
 import { Toasts } from './toast';
 
+const DEFAULT_SETTINGS: Settings = {
+  sound: true,
+  notify: false,
+  autoBreak: true,
+  strict: false,
+  breathe: true,
+  tick: 'off',
+};
+
 export type Dialog = 'intention' | 'breathe' | 'reflect' | 'settings' | null;
-type Resource = 'presets' | 'tasks' | 'sessions' | 'settings';
+type Resource = 'presets' | 'tasks' | 'sessions' | 'settings' | 'account';
 
 /**
- * The app's state: it turns the store's events into what the screen shows, and runs the focus
- * flow, intention → (breathe) → focus → reflect → break. Every open tab follows along.
+ * The session flow and the user's productivity data. It turns live server events
+ * into UI state and runs intention → (breathe) → focus → reflect → break. The
+ * timer itself runs on the server, so every tab and device follows along.
  */
 @Injectable({ providedIn: 'root' })
 export class Brew {
-  private readonly store = inject(Store);
+  private readonly api = inject(Api);
+  private readonly auth = inject(Auth);
+  private readonly live = inject(LiveEvents);
   private readonly toasts = inject(Toasts);
   readonly timer = inject(Timer);
 
   // ---- data ----------------------------------------------------------------------------
-  readonly presets = signal<Preset[]>(this.store.presets());
-  readonly tasks = signal<Task[]>(this.store.tasks());
-  readonly stats = signal<Stats>(this.store.stats());
-  readonly settings = signal<Settings>(this.store.settings());
+  readonly presets = signal<Preset[]>([]);
+  readonly tasks = signal<Task[]>([]);
+  readonly stats = signal<Stats | null>(null);
+  readonly settings = computed(() => this.auth.user()?.settings ?? DEFAULT_SETTINGS);
 
   readonly modes = computed<Mode[]>(() => [...BUILTIN_MODES, ...this.presets().map(fromPreset)]);
   private readonly modeKey = persistedSignal('brew:mode', BUILTIN_MODES[0].key);
@@ -64,38 +78,59 @@ export class Brew {
   readonly intention = computed(() => this.timer.state().intention ?? '');
 
   constructor() {
-    this.store.events$.subscribe((e) => this.handle(e));
+    this.live.events$.subscribe((e) => this.handle(e));
     this.tickClock();
     this.strictMode();
     this.liveTab();
-    effect(() => {
-      if (this.store.unsaved()) this.toasts.show("This browser won't save, so changes last until you close the tab.");
-    });
   }
 
-  /** Read one kind of data from the store again. */
-  refresh(kind: Resource): void {
-    if (kind === 'presets') this.presets.set(this.store.presets());
-    if (kind === 'tasks') this.tasks.set(this.store.tasks());
-    if (kind === 'sessions') this.stats.set(this.store.stats());
-    if (kind === 'settings') this.settings.set(this.store.settings());
+  // ---- lifecycle -------------------------------------------------------------------------
+
+  /** After login: open the live stream and load everything. */
+  async start(): Promise<void> {
+    this.live.connect();
+    await Promise.all((['presets', 'tasks', 'sessions'] as Resource[]).map((r) => this.refresh(r)));
+    this.timer.apply(await this.api.timer());
   }
 
-  private handle(e: StoreEvent): void {
+  /** After logout: drop the stream and the user's data. */
+  stop(): void {
+    this.live.disconnect();
+    this.timer.reset();
+    this.presets.set([]);
+    this.tasks.set([]);
+    this.stats.set(null);
+    this.reflecting.set(null);
+    this.pendingBreak.set(false);
+    this.dialog.set(null);
+  }
+
+  async refresh(kind: Resource): Promise<void> {
+    try {
+      if (kind === 'presets') this.presets.set(await this.api.presets());
+      if (kind === 'tasks') this.tasks.set(await this.api.tasks());
+      if (kind === 'sessions') this.stats.set(await this.api.stats());
+      if (kind === 'settings' || kind === 'account') await this.auth.restore();
+    } catch {
+      // A 401 is handled by the interceptor; anything else is retried on the next event.
+    }
+  }
+
+  private handle(e: LiveEvent): void {
     switch (e.type) {
       case 'timer':
         this.timer.apply(e.data);
         if (e.data.status !== 'idle') {
           this.pendingBreak.set(false);
-          if (this.reflecting()) this.closeReflection(); // another tab moved on
+          if (this.reflecting()) this.closeReflection(); // another device moved on
         }
         break;
       case 'session.completed':
         if (e.data.session.completed) this.announce('focus', 'Brew complete. Time for a break ☕');
         this.reflecting.set(e.data);
         this.dialog.set('reflect');
-        this.refresh('sessions');
-        this.refresh('tasks');
+        void this.refresh('sessions');
+        void this.refresh('tasks');
         break;
       case 'session.discarded':
         this.toasts.show('Under a minute, so not logged.');
@@ -107,7 +142,10 @@ export class Brew {
         if (this.reflecting()?.session.id === e.data.id) this.closeReflection();
         break;
       case 'changed':
-        this.refresh(e.data.kind);
+        void this.refresh(e.data.kind);
+        break;
+      case 'save.failed':
+        this.toasts.show("This browser won't save, so changes last until you close the tab.");
         break;
     }
   }
@@ -119,7 +157,7 @@ export class Brew {
     const { status } = this.timer.state();
     if (status === 'running') this.control('pause');
     else if (status === 'paused') this.control('resume');
-    else if (this.pendingBreak()) this.startBreak();
+    else if (this.pendingBreak()) void this.startBreak();
     else this.dialog.set('intention');
   }
 
@@ -130,25 +168,24 @@ export class Brew {
     this.pending = { mode: m.name, planned: m.focus * 60, intention, task_id: taskId };
     this.distractions = 0;
     if (breathe) this.dialog.set('breathe');
-    else this.launch();
+    else void this.launch();
   }
 
   /** Start the prepared focus block (after the intention, and breathing if chosen). */
-  launch(): void {
+  async launch(): Promise<void> {
     this.dialog.set(null);
     const req = this.pending;
     this.pending = undefined;
-    if (req) this.attempt(() => this.timer.startFocus({ ...req, day: localDay() }));
+    if (req) await this.attempt(() => this.timer.startFocus({ ...req, day: localDay() }));
   }
 
-  /** Save the note, then move on to the break. */
-  finishReflection(note: string): void {
+  async finishReflection(note: string): Promise<void> {
     const done = this.reflecting();
     this.closeReflection();
     if (!done) return;
-    if (note) this.attempt(() => this.store.reflect(done.session.id, note));
+    if (note) this.api.reflect(done.session.id, note).catch((err) => this.toasts.show(errorMessage(err)));
     if (!this.mode().rest) return;
-    if (this.settings().autoBreak) this.startBreak();
+    if (this.settings().autoBreak) await this.startBreak();
     else this.pendingBreak.set(true);
   }
 
@@ -157,9 +194,9 @@ export class Brew {
     if (this.dialog() === 'reflect') this.dialog.set(null);
   }
 
-  startBreak(): void {
+  async startBreak(): Promise<void> {
     this.pendingBreak.set(false);
-    this.attempt(() => this.timer.startBreak(this.mode().rest * 60));
+    await this.attempt(() => this.timer.startBreak(this.mode().rest * 60));
   }
 
   /** Finish focus early (logged if at least a minute) or skip a break. */
@@ -186,13 +223,12 @@ export class Brew {
   }
 
   private control(action: TimerAction): void {
-    this.attempt(() => this.timer.control(action));
+    void this.attempt(() => this.timer.control(action));
   }
 
-  /** Runs an action, showing any mistake as a toast. */
-  private attempt(fn: () => void): void {
+  private async attempt(fn: () => Promise<unknown>): Promise<void> {
     try {
-      fn();
+      await fn();
     } catch (err) {
       this.toasts.show(errorMessage(err));
     }
@@ -204,33 +240,45 @@ export class Brew {
     this.modeKey.set(mode.key);
   }
 
-  /** Mistakes are thrown back to the form, which shows them beside the fields. */
-  createMode(name: string, focus: number, rest: number): void {
-    const preset = this.store.createPreset({ name, focus, rest });
+  async createMode(name: string, focus: number, rest: number): Promise<void> {
+    const preset = await this.api.createPreset({ name, focus, rest }); // errors go back to the form
+    this.presets.update((list) => (list.some((p) => p.id === preset.id) ? list : [...list, preset]));
     this.modeKey.set(fromPreset(preset).key);
     this.toasts.show(`Saved “${preset.name}”`);
   }
 
-  deleteMode(mode: Mode): void {
+  async deleteMode(mode: Mode): Promise<void> {
     if (mode.presetId === undefined) return;
-    this.attempt(() => {
-      this.store.deletePreset(mode.presetId!);
+    await this.attempt(async () => {
+      await this.api.deletePreset(mode.presetId!);
+      this.presets.update((list) => list.filter((p) => p.id !== mode.presetId));
       if (mode.key === this.modeKey()) this.modeKey.set(BUILTIN_MODES[0].key);
     });
   }
 
-  addTask(title: string, estimate: number): void {
-    this.attempt(() => this.store.createTask(title, estimate));
+  async addTask(title: string, estimate: number): Promise<void> {
+    await this.attempt(async () => {
+      const task = await this.api.createTask(title, estimate);
+      // The live "changed" event may have refetched the list already, so add it only if it's missing.
+      this.tasks.update((list) =>
+        list.some((t) => t.id === task.id) ? list : [...list.filter((t) => !t.done), task, ...list.filter((t) => t.done)],
+      );
+    });
   }
 
-  toggleTask(task: Task): void {
-    this.attempt(() => this.store.setTaskDone(task.id, !task.done));
+  async toggleTask(task: Task): Promise<void> {
+    this.tasks.update((list) => list.map((t) => (t.id === task.id ? { ...t, done: !t.done } : t)));
+    await this.attempt(() => this.api.updateTask(task.id, { done: !task.done }));
     if (task.id === this.taskId() && !task.done) this.taskId.set(null);
+    void this.refresh('tasks');
   }
 
-  removeTask(task: Task): void {
-    this.attempt(() => this.store.deleteTask(task.id));
-    if (task.id === this.taskId()) this.taskId.set(null);
+  async removeTask(task: Task): Promise<void> {
+    await this.attempt(async () => {
+      await this.api.deleteTask(task.id);
+      this.tasks.update((list) => list.filter((t) => t.id !== task.id));
+      if (task.id === this.taskId()) this.taskId.set(null);
+    });
   }
 
   /** Pick a task and open the intention prompt for it. */
@@ -242,18 +290,26 @@ export class Brew {
   // ---- settings ----------------------------------------------------------------------------
 
   async updateSettings(patch: Partial<Settings>): Promise<void> {
-    if (patch.notify && !this.settings().notify && !(await this.allowNotifications())) {
+    const user = this.auth.user();
+    if (!user) return;
+    if (patch.notify && !user.settings.notify && !(await this.allowNotifications())) {
       this.toasts.show('Notifications are blocked for this site in your browser.');
       return;
     }
-    this.attempt(() => this.store.saveSettings({ ...this.settings(), ...patch }));
+    this.auth.user.set({ ...user, settings: { ...user.settings, ...patch } }); // optimistic
+    try {
+      await this.api.saveSettings({ ...user.settings, ...patch });
+    } catch (err) {
+      this.auth.user.set(user);
+      this.toasts.show(errorMessage(err));
+    }
   }
 
-  clearData(): void {
+  async clearData(): Promise<void> {
     if (!confirm('Delete every logged session? Tasks and custom modes are kept.')) return;
-    this.attempt(() => {
-      this.store.clearSessions();
-      this.refresh('tasks'); // their totals came from those sessions
+    await this.attempt(async () => {
+      await this.api.clearSessions();
+      await Promise.all([this.refresh('sessions'), this.refresh('tasks')]);
       this.toasts.show('All sessions deleted.');
     });
   }
@@ -286,7 +342,7 @@ export class Brew {
     });
   }
 
-  /** Strict mode: every tab switch mid-focus is logged as a distraction, and closing asks first. */
+  /** Strict mode: every tab switch mid-focus is logged on the server, and closing asks first. */
   private strictMode(): void {
     const active = computed(() => {
       const { status, phase } = this.timer.state();

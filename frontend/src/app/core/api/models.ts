@@ -1,18 +1,23 @@
-/** The shapes of everything the app stores. */
+/** Shapes of the Go API's JSON. The Pages build's in-browser store returns the same ones. */
 
 export type TickStyle = 'off' | 'clock' | 'ominous';
 
-/** Preferences. */
 export interface Settings {
   sound: boolean;
   notify: boolean;
   autoBreak: boolean;
-  strict: boolean; // log tab switches during focus as distractions
+  strict: boolean;
   breathe: boolean;
   tick: TickStyle;
 }
 
-/** A saved custom timing mode, e.g. "Thesis 75/15". */
+export interface User {
+  id: number;
+  email: string;
+  name: string;
+  settings: Settings;
+}
+
 export interface Preset {
   id: number;
   name: string;
@@ -30,7 +35,6 @@ export interface Mode {
   presetId?: number;
 }
 
-/** Something to get done, with totals worked out from its sessions. */
 export interface Task {
   id: number;
   title: string;
@@ -40,35 +44,33 @@ export interface Task {
   minutes: number;
 }
 
-/** One finished focus block. Breaks aren't stored. */
 export interface Session {
   id: number;
   task_id: number | null;
   mode: string;
   planned: number; // seconds
   focused: number; // seconds
-  completed: boolean; // ran to zero rather than ended early
+  completed: boolean;
   intention: string;
   reflection: string;
   distractions: number;
-  day: string; // the local calendar day it started, so streaks follow the user's midnight
+  day: string;
   created_at: string;
 }
 
-/** The numbers behind the Progress page. */
 export interface Stats {
   today: { minutes: number; sessions: number };
   streak: number;
   best_streak: number;
   total: { minutes: number; sessions: number; completed: number };
-  heatmap: Record<string, number>; // minutes by day
+  heatmap: Record<string, number>;
 }
 
 export type Phase = 'focus' | 'break';
 type TimerStatus = 'idle' | 'running' | 'paused';
 export type TimerAction = 'pause' | 'resume' | 'finish' | 'cancel' | 'distraction';
 
-/** The timer. While running, the time left is worked out from ends_at. */
+/** The server-run timer. Remaining time is derived from ends_at while running. */
 export interface TimerState {
   phase: Phase;
   status: TimerStatus;
@@ -79,9 +81,9 @@ export interface TimerState {
   mode?: string;
   intention?: string;
   task_id?: number;
+  server_time: string;
 }
 
-/** What it takes to start a focus block. */
 export interface FocusRequest {
   mode: string;
   planned: number; // seconds
@@ -96,11 +98,12 @@ export interface Completed {
   unlocked?: string; // café decoration earned
 }
 
-/** What the store announces, to this tab and every other open tab. */
-export type StoreEvent =
+/** Everything the server pushes over /api/events. */
+export type LiveEvent =
   | { type: 'timer'; data: TimerState }
   | { type: 'session.completed'; data: Completed }
   | { type: 'session.discarded'; data: null }
   | { type: 'break.completed'; data: { completed: boolean } }
   | { type: 'session.reflected'; data: { id: number } }
-  | { type: 'changed'; data: { kind: 'presets' | 'tasks' | 'sessions' | 'settings' } };
+  | { type: 'changed'; data: { kind: 'presets' | 'tasks' | 'sessions' | 'settings' | 'account' } }
+  | { type: 'save.failed'; data: null }; // browser build only: localStorage refused a write
