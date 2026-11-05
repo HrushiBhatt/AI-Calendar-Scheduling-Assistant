@@ -11,7 +11,7 @@ docker compose up --build            # http://localhost:5001
 
 ![A focus block from start to finish: pick a task, set an intention, the mug drains, write a reflection, the mug refills on the break, and the session appears on the Progress page](docs/assets/demo.gif)
 
-<img src="docs/assets/stats.svg" alt="One process to run, 5.6 KB per running timer, a 27 MB static binary, 50 Go tests and 53 frontend tests" width="100%"/>
+<img src="docs/assets/stats.svg" alt="One process to run, 5.6 KB per running timer, a 27 MB static binary, 50 Go tests and 54 frontend tests" width="100%"/>
 
 ## Why Go
 

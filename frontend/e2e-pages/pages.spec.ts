@@ -64,7 +64,8 @@ test('it opens straight on the timer, with no sign-in and nothing sent anywhere'
 });
 
 test('an old sign-in link just opens the app', async ({ page }) => {
-  await page.goto('login');
+  const response = await page.goto('login');
+  expect(response?.status()).toBe(200);
   await expect(page).toHaveURL(/\/$/);
   await expect(page.locator('app-timer-stage')).toBeVisible();
 });
@@ -159,12 +160,28 @@ test('tasks can be added, finished and removed', async ({ page }) => {
   await expect(page.getByText('Buy coffee beans')).toHaveCount(0);
 });
 
-test('deep links and reloads work, as Pages serves them', async ({ page }) => {
-  const response = await page.goto('progress');
-  await expect(page.locator('app-heatmap svg')).toBeVisible();
-  expect(response?.ok() || response?.status() === 404).toBe(true); // Pages' 404.html boots the app
-  await page.reload();
-  await expect(page.locator('app-heatmap svg')).toBeVisible();
+test('direct links and refreshes are a real 200, not a 404', async ({ page }) => {
+  const failures: string[] = [];
+  page.on('response', (r) => {
+    if (r.status() >= 400) failures.push(`${r.status()} ${r.url()}`);
+  });
+  for (const path of ['progress', 'progress/']) {
+    const response = await page.goto(path);
+    expect(response?.status(), path).toBe(200);
+    await expect(page.locator('app-heatmap svg')).toBeVisible();
+    expect((await page.reload())?.status(), `${path} after a refresh`).toBe(200);
+    await expect(page.locator('app-heatmap svg')).toBeVisible();
+    // The tabs still work from a page opened this way, so its links must resolve from the right base.
+    await page.getByRole('link', { name: 'Brew', exact: true }).click();
+    await expect(page.locator('app-timer-stage')).toBeVisible();
+  }
+  expect(failures).toEqual([]);
+});
+
+test('an unknown address still opens the app, rather than a dead end', async ({ page }) => {
+  const response = await page.goto('no/such/page');
+  expect(response?.status()).toBe(404); // honest, for link checkers
+  await expect(page.locator('app-timer-stage')).toBeVisible();
 });
 
 test('it starts dark, and a switch to light holds across a reload', async ({ page }) => {

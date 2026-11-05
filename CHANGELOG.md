@@ -2,6 +2,15 @@
 
 Newest first. The git history has the full detail.
 
+## 2026-11-05: reliable GitHub Pages deploys
+
+**Fixed**
+- Direct links and refreshes on the live site returned a 404 status, though the app still appeared. Each route now has a real page, so they return 200.
+- A Dependabot pull request could cancel a deploy from `main`, because both shared one concurrency group. Each branch now has its own.
+
+**Added**
+- After publishing, CI checks that the live URL is really serving the new build, so a green run means the site works.
+
 ## 2026-11-05: a simple Go backend, JWT sign-in and Docker
 
 **Added**

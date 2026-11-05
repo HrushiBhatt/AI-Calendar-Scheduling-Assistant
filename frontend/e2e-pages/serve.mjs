@@ -30,7 +30,11 @@ createServer((req, res) => {
     if (existsSync(file)) {
       if (statSync(file).isFile()) return send(res, 200, file);
       const index = join(file, 'index.html');
-      if (existsSync(index)) return send(res, 200, index);
+      if (existsSync(index)) {
+        // Pages redirects a folder to its trailing slash, so routes go through that here too.
+        if (!path.endsWith('/')) return void res.writeHead(301, { Location: `${path}/` }).end();
+        return send(res, 200, index);
+      }
     }
   }
   send(res, 404, join(root, '404.html'));

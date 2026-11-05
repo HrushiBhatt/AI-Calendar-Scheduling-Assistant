@@ -122,8 +122,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # publishing pushes the gh-pages branch
+    # One group per branch, so a newer push to main replaces an older one, but a Dependabot pull
+    # request can never cancel a deploy from main.
     concurrency:
-      group: pages
+      group: pages-${{ github.ref }}
       cancel-in-progress: true
     env:
       PAGES_BASE: /${{ github.event.repository.name }}/
@@ -161,3 +163,9 @@ jobs:
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -q -m "Deploy ${GITHUB_SHA::7}"
           git push -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+      # A green run should mean the real site works, not just that the files were pushed.
+      - name: Check the live site
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          owner="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+          bash .github/check-live-site.sh "https://${owner}.github.io${PAGES_BASE}" frontend/dist/brew-focus/browser

@@ -52,5 +52,8 @@ pages: ## the browser-only GitHub Pages build on :4200, with no Go server
 BASE ?= /BrewFocus/
 pages-build: ## the GitHub Pages site, in frontend/dist/brew-focus/browser; test it with `cd frontend && npm run e2e:pages`
 	$(NODE) cd frontend && npx ng build --configuration pages --base-href "$(BASE)"
-	# 404.html boots the app on deep links like /progress; .nojekyll serves files as they are.
-	cd frontend/dist/brew-focus/browser && cp index.html 404.html && touch .nojekyll
+	# Pages has no server to send every path to the app. A copy of the page for each route makes
+	# direct links and refreshes a real 200, and 404.html still boots the app on anything else.
+	# .nojekyll serves files as they are.
+	cd frontend/dist/brew-focus/browser && cp index.html 404.html && touch .nojekyll && \
+		for route in progress login; do mkdir -p "$$route" && cp index.html "$$route/index.html"; done

@@ -33,7 +33,7 @@ KB_PER_TIMER = 5.6  # at 10,000 timers
 BINARY_MB = 26.7  # go build -trimpath -ldflags="-s -w", as the Dockerfile does, here for macOS on ARM
 GO_TESTS = 50
 UNIT_TESTS = 35
-BROWSER_TESTS = 4 + 14  # against the Go server, then against the Pages build
+BROWSER_TESTS = 4 + 15  # against the Go server, then against the Pages build
 WEB_TESTS = UNIT_TESTS + BROWSER_TESTS
 
 
